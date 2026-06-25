@@ -11,7 +11,6 @@ export function HeroSection() {
         loop
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
-        poster="/media/Hero/1f549800-9e30-4f47-9757-8072e46a597b.png"
       >
         <source src="/media/Hero/6月25日.mp4" type="video/mp4" />
       </video>
