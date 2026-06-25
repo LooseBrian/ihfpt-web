@@ -13,22 +13,22 @@ export function HeroSection() {
         />
       </div>
 
-      <div className="container mx-auto px-4 py-16 md:py-24 relative">
+      <div className="container mx-auto px-4 py-24 md:py-36 lg:py-44 relative">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-brand-800/80 backdrop-blur-sm border border-brand-700 rounded-full px-4 py-1.5 mb-6">
+          <div className="inline-flex items-center gap-2 bg-brand-800/80 backdrop-blur-sm border border-brand-700 rounded-full px-4 py-1.5 mb-8">
             <span className="w-2 h-2 bg-gold-400 rounded-full animate-pulse" />
             <span className="text-sm text-brand-100">
               中国食品药品企业质量安全促进会主办
             </span>
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
             国际清真食品贸易平台
           </h1>
-          <p className="text-lg md:text-xl text-brand-200 mb-2">
+          <p className="text-lg md:text-2xl text-brand-200 mb-3">
             International Halal Food Trade Platform
           </p>
-          <p className="text-base text-brand-300 mb-8 max-w-xl mx-auto">
+          <p className="text-base md:text-lg text-brand-300 mb-10 max-w-xl mx-auto">
             国家级、全球化、垂直型清真食品 B2B 贸易与产业服务平台
             <br className="hidden md:block" />
             链接中国优质清真食品产能与全球穆斯林消费市场
@@ -53,7 +53,7 @@ export function HeroSection() {
             </Button>
           </div>
 
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-brand-300">
+          <div className="mt-16 flex flex-wrap items-center justify-center gap-6 text-sm text-brand-300">
             {["覆盖 28+ 国家", "首批 50+ 供应商", "6 大核心品类", "一站式服务"].map(
               (item) => (
                 <div key={item} className="flex items-center gap-1.5">
