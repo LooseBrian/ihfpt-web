@@ -4,16 +4,22 @@ import { Search, UserPlus, ArrowRight } from "lucide-react";
 export function HeroSection() {
   return (
     <section className="relative bg-brand-900 text-white overflow-hidden">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 left-0 w-full h-full"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-      </div>
+      {/* Background video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+        poster="/media/Hero/1f549800-9e30-4f47-9757-8072e46a597b.png"
+      >
+        <source src="/media/Hero/6月25日.mp4" type="video/mp4" />
+      </video>
 
-      <div className="container mx-auto px-4 py-24 md:py-36 lg:py-44 relative">
+      {/* Overlay for text readability */}
+      <div className="absolute inset-0 bg-brand-900/60" />
+
+      <div className="container mx-auto px-4 py-24 md:py-36 lg:py-44 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-brand-800/80 backdrop-blur-sm border border-brand-700 rounded-full px-4 py-1.5 mb-8">
             <span className="w-2 h-2 bg-gold-400 rounded-full animate-pulse" />
