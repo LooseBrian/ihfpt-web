@@ -45,7 +45,7 @@ export function HeroSection() {
             <Button
               size="lg"
               variant="outline"
-              className="border-brand-400 text-white hover:bg-brand-800 px-8 gap-2"
+              className="border-brand-400 bg-transparent text-white hover:bg-brand-800 hover:text-white px-8 gap-2"
             >
               <UserPlus className="h-5 w-5" />
               申请入驻
