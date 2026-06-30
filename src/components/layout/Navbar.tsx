@@ -14,18 +14,12 @@ export function Navbar() {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2 shrink-0">
-          <div className="w-10 h-10 bg-brand-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">IH</span>
-          </div>
-          <div className="hidden md:block">
-            <div className="text-brand-900 font-bold text-base leading-tight">
-              国际清真食品贸易平台
-            </div>
-            <div className="text-muted-foreground text-[10px] leading-tight">
-              International Halal Food Trade Platform
-            </div>
-          </div>
+        <a href="/" className="flex items-center shrink-0">
+          <img
+            src="/logo.png"
+            alt="International Halal Food Trade Platform"
+            className="h-10 w-auto"
+          />
         </a>
 
         {/* Desktop Nav */}
