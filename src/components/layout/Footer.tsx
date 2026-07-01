@@ -7,10 +7,12 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center">
-                <span className="text-brand-900 font-bold text-lg">IH</span>
-              </div>
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo-icon.png"
+                alt="IHFTP"
+                className="w-10 h-10 rounded-lg object-contain bg-white/10"
+              />
               <div>
                 <div className="text-white font-bold">国际清真食品贸易平台</div>
                 <div className="text-brand-300 text-xs">IHFTP</div>

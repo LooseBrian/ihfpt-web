@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "国际清真食品贸易平台 | IHFTP",
   description: "International Halal Food Trade Platform - 国家级、全球化、垂直型清真食品B2B贸易与产业服务平台",
   keywords: ["halal", "清真食品", "B2B", "贸易平台", "清真认证", "跨境电商"],
+  icons: {
+    icon: "/favicon-128.png",
+  },
 };
 
 export default function RootLayout({
