@@ -12,13 +12,18 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
-        <a href="/" className="flex items-center shrink-0">
+        <a href="/" className="flex items-center gap-2 shrink-0">
           <img
-            src="/logo.png"
+            src="/logo-icon-navbar.png"
+            alt="IHFTP"
+            className="h-12 w-auto object-contain"
+          />
+          <img
+            src="/logo-text-navbar.png"
             alt="International Halal Food Trade Platform"
-            className="h-10 w-auto"
+            className="h-12 w-auto object-contain"
           />
         </a>
 

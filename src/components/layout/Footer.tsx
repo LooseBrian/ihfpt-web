@@ -11,11 +11,14 @@ export function Footer() {
               <img
                 src="/logo-icon.png"
                 alt="IHFTP"
-                className="w-10 h-10 rounded-lg object-contain bg-white/10"
+                className="w-12 h-12 object-contain"
               />
-              <div>
-                <div className="text-white font-bold">国际清真食品贸易平台</div>
-                <div className="text-brand-300 text-xs">IHFTP</div>
+              <div className="bg-white/90 rounded-lg px-3 py-2">
+                <img
+                  src="/logo-text.png"
+                  alt="International Halal Food Trade Platform"
+                  className="h-9 w-auto object-contain"
+                />
               </div>
             </div>
             <p className="text-sm text-brand-200 leading-relaxed">
