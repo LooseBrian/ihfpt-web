@@ -74,14 +74,14 @@ export const categories: Category[] = [
 ];
 
 export const products: Product[] = [
-  { id: "p1", name: "清真牛肉丸", spec: "500g/袋", moq: "1000袋", priceRange: "$2.5 - $3.0", supplier: "GreenHalal Foods", certType: "JAKIM", image: "https://images.unsplash.com/photo-1607623814075-e51df1bd656c?w=400&h=300&fit=crop" },
-  { id: "p2", name: "速冻清真水饺", spec: "20只/盒", moq: "500盒", priceRange: "$3.0 - $3.8", supplier: "Orient Delight", certType: "HALAL", image: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400&h=300&fit=crop" },
-  { id: "p3", name: "清真咖喱酱", spec: "200g/瓶", moq: "2000瓶", priceRange: "$1.2 - $1.5", supplier: "SpiceRoute Co.", certType: "SFDA", image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&h=300&fit=crop" },
-  { id: "p4", name: "清真羊肉串", spec: "10串/包", moq: "800包", priceRange: "$4.5 - $5.5", supplier: "Xinjiang Best", certType: "JAKIM", image: "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400&h=300&fit=crop" },
-  { id: "p5", name: "有机清真大米", spec: "5kg/袋", moq: "300袋", priceRange: "$8.0 - $10.0", supplier: "GoldenGrain Ltd.", certType: "HALAL", image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop" },
-  { id: "p6", name: "清真即食汤", spec: "40g/杯", moq: "1500杯", priceRange: "$0.8 - $1.0", supplier: "SoupMaster", certType: "FDA", image: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&h=300&fit=crop" },
-  { id: "p7", name: "清真芝麻烧饼", spec: "6个/袋", moq: "600袋", priceRange: "$2.0 - $2.5", supplier: "BakeryHalal", certType: "HALAL", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop" },
-  { id: "p8", name: "清真辣椒酱", spec: "350g/瓶", moq: "1200瓶", priceRange: "$1.5 - $2.0", supplier: "ChiliKing", certType: "SFDA", image: "https://images.unsplash.com/photo-1588252303782-cb80119abd6d?w=400&h=300&fit=crop" },
+  { id: "p1", name: "清真牛肉丸", spec: "500g/袋", moq: "1000袋", priceRange: "$2.5 - $3.0", supplier: "GreenHalal Foods", certType: "JAKIM", image: "/media/product-beef-meatballs.jpg" },
+  { id: "p2", name: "速冻清真水饺", spec: "20只/盒", moq: "500盒", priceRange: "$3.0 - $3.8", supplier: "Orient Delight", certType: "HALAL", image: "/media/product-frozen-dumplings.jpg" },
+  { id: "p3", name: "清真咖喱酱", spec: "200g/瓶", moq: "2000瓶", priceRange: "$1.2 - $1.5", supplier: "SpiceRoute Co.", certType: "SFDA", image: "/media/product-curry-sauce.jpg" },
+  { id: "p4", name: "清真羊肉串", spec: "10串/包", moq: "800包", priceRange: "$4.5 - $5.5", supplier: "Xinjiang Best", certType: "JAKIM", image: "/media/product-lamb-skewers.jpg" },
+  { id: "p5", name: "有机清真大米", spec: "5kg/袋", moq: "300袋", priceRange: "$8.0 - $10.0", supplier: "GoldenGrain Ltd.", certType: "HALAL", image: "/media/product-organic-rice.jpg" },
+  { id: "p6", name: "清真即食汤", spec: "40g/杯", moq: "1500杯", priceRange: "$0.8 - $1.0", supplier: "SoupMaster", certType: "FDA", image: "/media/product-instant-soup.jpg" },
+  { id: "p7", name: "清真芝麻烧饼", spec: "6个/袋", moq: "600袋", priceRange: "$2.0 - $2.5", supplier: "BakeryHalal", certType: "HALAL", image: "/media/product-sesame-bread.jpg" },
+  { id: "p8", name: "清真辣椒酱", spec: "350g/瓶", moq: "1200瓶", priceRange: "$1.5 - $2.0", supplier: "ChiliKing", certType: "SFDA", image: "/media/product-chili-sauce.jpg" },
 ];
 
 export const suppliers: Supplier[] = [
@@ -106,8 +106,8 @@ export const stats: Stat[] = [
 ];
 
 export const projects: Project[] = [
-  { id: "pr1", title: "马来西亚双国双园", description: "中马合作的标志性清真产业园区，集生产、加工、认证、物流于一体，辐射东盟十国市场。", image: "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=400&fit=crop" },
-  { id: "pr2", title: "临夏清真产业园", description: "中国西北最大的清真食品产业基地，拥有完整的产业链和国家级出口资质，产品远销中东、北非。", image: "https://images.unsplash.com/photo-1553413077-190dd305871c?w=600&h=400&fit=crop" },
+  { id: "pr1", title: "马来西亚双国双园", description: "中马合作的标志性清真产业园区，集生产、加工、认证、物流于一体，辐射东盟十国市场。", image: "/media/project-malaysia-park.jpg" },
+  { id: "pr2", title: "临夏清真产业园", description: "中国西北最大的清真食品产业基地，拥有完整的产业链和国家级出口资质，产品远销中东、北非。", image: "/media/project-linxia-park.jpg" },
 ];
 
 export const news: NewsItem[] = [
