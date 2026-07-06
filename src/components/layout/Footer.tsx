@@ -6,21 +6,12 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo-icon.png"
-                alt="IHFTP"
-                className="w-12 h-12 object-contain"
-              />
-              <div className="bg-white/90 rounded-lg px-3 py-2">
-                <img
-                  src="/logo-text.png"
-                  alt="International Halal Food Trade Platform"
-                  className="h-9 w-auto object-contain"
-                />
-              </div>
-            </div>
+          <div className="space-y-4 lg:col-span-2">
+            <img
+              src="/logo-footer.png"
+              alt="IHFTP 国际清真食品贸易平台"
+              className="h-24 w-auto object-contain rounded-xl shadow-lg"
+            />
             <p className="text-sm text-brand-200 leading-relaxed">
               国家级、全球化、垂直型清真食品B2B贸易与产业服务平台，链接中国优质清真食品产能与全球穆斯林消费市场。
             </p>
