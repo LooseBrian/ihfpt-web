@@ -45,10 +45,23 @@ export interface Supplier {
   id: string;
   name: string;
   logo: string;
+  tier: "S" | "A" | "认证";
   categories: string[];
   certs: string[];
   exportVolume: string;
   location: string;
+  foundedYear?: number;
+  description?: string;
+  exportRegions?: string[];
+  businessType?: string;
+  qualifications?: string[];
+  services?: string[];
+  annualCapacity?: string;
+  exportCountries?: number;
+  employeeCount?: string;
+  isTangyuanhui?: boolean;
+  productImages?: string[];
+  isNew?: boolean;
 }
 
 export interface Service {
@@ -155,12 +168,219 @@ export const products: Product[] = [
 ];
 
 export const suppliers: Supplier[] = [
-  { id: "s1", name: "GreenHalal Foods Co., Ltd.", logo: "GH", categories: ["牛羊肉制品", "速冻调理品"], certs: ["JAKIM", "HALAL", "FDA"], exportVolume: "$5M+", location: "宁夏" },
-  { id: "s2", name: "Orient Delight Group", logo: "OD", categories: ["清真预制菜", "休闲食品"], certs: ["JAKIM", "HALAL"], exportVolume: "$8M+", location: "山东" },
-  { id: "s3", name: "SpiceRoute International", logo: "SR", categories: ["调味品", "米面粮油"], certs: ["SFDA", "HALAL"], exportVolume: "$3M+", location: "四川" },
-  { id: "s4", name: "Xinjiang Best Meats", logo: "XB", categories: ["牛羊肉制品"], certs: ["JAKIM", "HALAL", "FDA"], exportVolume: "$12M+", location: "新疆" },
-  { id: "s5", name: "Huifa Foods", logo: "HF", categories: ["速冻调理品", "清真预制菜"], certs: ["JAKIM", "HALAL", "GSO"], exportVolume: "$15M+", location: "山东" },
-  { id: "s6", name: "GoldenGrain Ltd.", logo: "GG", categories: ["米面粮油"], certs: ["HALAL", "GSO"], exportVolume: "$6M+", location: "黑龙江" },
+  {
+    id: "s1",
+    name: "GreenHalal Foods Co., Ltd.",
+    logo: "GH",
+    tier: "A",
+    categories: ["牛羊肉制品", "速冻调理品"],
+    certs: ["JAKIM", "HALAL", "FDA"],
+    exportVolume: "$5M+",
+    location: "宁夏",
+    foundedYear: 2008,
+    description: "专注清真牛羊肉深加工20年，拥有完整的出口资质体系，产品远销中东、东南亚十余国。",
+    exportRegions: ["中东", "东盟"],
+    businessType: "源头生产工厂",
+    qualifications: ["出口食品生产备案", "HACCP", "ISO22000"],
+    services: ["支持样品单", "支持拼柜", "可代办清关"],
+    annualCapacity: "3万吨",
+    exportCountries: 12,
+    employeeCount: "500+",
+    isTangyuanhui: true,
+    productImages: ["/media/product-beef-meatballs.jpg", "/media/product-lamb-skewers.jpg"],
+  },
+  {
+    id: "s2",
+    name: "Orient Delight Group",
+    logo: "OD",
+    tier: "S",
+    categories: ["清真预制菜", "休闲食品", "速冻调理品"],
+    certs: ["JAKIM", "HALAL", "GSO"],
+    exportVolume: "$15M+",
+    location: "山东",
+    foundedYear: 1995,
+    description: "国内领先的清真食品出口集团，年出口额超1500万美元，是多家国际连锁商超核心供应商。",
+    exportRegions: ["东盟", "中东", "北非"],
+    businessType: "品牌运营商",
+    qualifications: ["出口食品生产备案", "AEO认证", "HACCP", "ISO22000"],
+    services: ["支持样品单", "支持拼柜", "可代办清关", "济南仓备货", "支持OEM"],
+    annualCapacity: "8万吨",
+    exportCountries: 22,
+    employeeCount: "2000+",
+    isTangyuanhui: true,
+    productImages: ["/media/product-frozen-dumplings.jpg", "/media/product-instant-soup.jpg", "/media/product-sesame-bread.jpg"],
+  },
+  {
+    id: "s3",
+    name: "SpiceRoute International",
+    logo: "SR",
+    tier: "认证",
+    categories: ["调味品", "米面粮油"],
+    certs: ["SFDA", "HALAL"],
+    exportVolume: "$3M+",
+    location: "四川",
+    foundedYear: 2012,
+    description: "专注清真调味品研发与出口，拥有自主知识产权配方，产品符合海湾国家进口标准。",
+    exportRegions: ["中东", "北非"],
+    businessType: "OEM/ODM代工厂",
+    qualifications: ["出口食品生产备案", "SC生产许可"],
+    services: ["支持拼柜", "支持OEM"],
+    annualCapacity: "1.5万吨",
+    exportCountries: 8,
+    employeeCount: "200+",
+    isTangyuanhui: false,
+    productImages: ["/media/product-curry-sauce.jpg", "/media/product-chili-sauce.jpg"],
+    isNew: true,
+  },
+  {
+    id: "s4",
+    name: "Xinjiang Best Meats",
+    logo: "XB",
+    tier: "S",
+    categories: ["牛羊肉制品"],
+    certs: ["JAKIM", "HALAL", "FDA", "IFANCA"],
+    exportVolume: "$25M+",
+    location: "新疆",
+    foundedYear: 2002,
+    description: "中国最大的清真牛羊肉出口企业之一，自有牧场+现代化加工厂，全产业链可控。",
+    exportRegions: ["东盟", "中东", "北非", "全球"],
+    businessType: "源头生产工厂",
+    qualifications: ["出口食品生产备案", "AEO认证", "HACCP", "ISO22000", "有机认证"],
+    services: ["支持样品单", "支持拼柜", "可代办清关", "济南仓备货"],
+    annualCapacity: "12万吨",
+    exportCountries: 28,
+    employeeCount: "3000+",
+    isTangyuanhui: true,
+    productImages: ["/media/product-lamb-skewers.jpg", "/media/product-beef-meatballs.jpg"],
+  },
+  {
+    id: "s5",
+    name: "Huifa Foods",
+    logo: "HF",
+    tier: "A",
+    categories: ["速冻调理品", "清真预制菜"],
+    certs: ["JAKIM", "HALAL", "GSO"],
+    exportVolume: "$12M+",
+    location: "山东",
+    foundedYear: 2005,
+    description: "北方最大速冻清真调理品生产基地，惠发品牌在海内外享有盛誉，支持全品类OEM定制。",
+    exportRegions: ["东盟", "中东"],
+    businessType: "品牌运营商",
+    qualifications: ["出口食品生产备案", "AEO认证", "HACCP"],
+    services: ["支持样品单", "支持拼柜", "可代办清关", "支持OEM"],
+    annualCapacity: "10万吨",
+    exportCountries: 15,
+    employeeCount: "1500+",
+    isTangyuanhui: true,
+    productImages: ["/media/product-beef-meatballs.jpg", "/media/product-frozen-dumplings.jpg"],
+  },
+  {
+    id: "s6",
+    name: "GoldenGrain Ltd.",
+    logo: "GG",
+    tier: "A",
+    categories: ["米面粮油"],
+    certs: ["HALAL", "GSO", "有机认证"],
+    exportVolume: "$8M+",
+    location: "黑龙江",
+    foundedYear: 1998,
+    description: "东北最大的有机清真粮油出口企业，拥有非转基因种植基地，产品覆盖全球穆斯林市场。",
+    exportRegions: ["全球"],
+    businessType: "源头生产工厂",
+    qualifications: ["出口食品生产备案", "有机认证", "HACCP", "ISO22000"],
+    services: ["支持拼柜", "济南仓备货"],
+    annualCapacity: "20万吨",
+    exportCountries: 18,
+    employeeCount: "800+",
+    isTangyuanhui: true,
+    productImages: ["/media/product-organic-rice.jpg"],
+  },
+  {
+    id: "s7",
+    name: "Ningxia Yisheng Halal",
+    logo: "NY",
+    tier: "认证",
+    categories: ["牛羊肉制品", "休闲食品"],
+    certs: ["HALAL", "GSO"],
+    exportVolume: "$2M+",
+    location: "宁夏",
+    foundedYear: 2015,
+    description: "新兴清真食品出口企业，专注牛肉干、休闲肉制品，产品深受中东市场欢迎。",
+    exportRegions: ["中东", "北非"],
+    businessType: "源头生产工厂",
+    qualifications: ["出口食品生产备案", "SC生产许可"],
+    services: ["支持样品单", "支持拼柜"],
+    annualCapacity: "8000吨",
+    exportCountries: 6,
+    employeeCount: "150+",
+    isTangyuanhui: false,
+    productImages: ["/media/product-lamb-skewers.jpg"],
+    isNew: true,
+  },
+  {
+    id: "s8",
+    name: "Hebei PoultryPrime",
+    logo: "HP",
+    tier: "A",
+    categories: ["牛羊肉制品", "速冻调理品"],
+    certs: ["JAKIM", "HALAL", "FDA"],
+    exportVolume: "$10M+",
+    location: "河北",
+    foundedYear: 2001,
+    description: "华北最大清真禽肉出口基地，集养殖、屠宰、深加工于一体，通过多项国际认证。",
+    exportRegions: ["中东", "北非", "东盟"],
+    businessType: "源头生产工厂",
+    qualifications: ["出口食品生产备案", "AEO认证", "HACCP", "ISO22000"],
+    services: ["支持样品单", "支持拼柜", "可代办清关", "支持OEM"],
+    annualCapacity: "6万吨",
+    exportCountries: 14,
+    employeeCount: "1200+",
+    isTangyuanhui: true,
+    productImages: ["/media/product-lamb-skewers.jpg"],
+  },
+  {
+    id: "s9",
+    name: "TropicalSnacks Co.",
+    logo: "TS",
+    tier: "认证",
+    categories: ["休闲食品", "米面粮油"],
+    certs: ["HALAL", "JAKIM"],
+    exportVolume: "$4M+",
+    location: "广西",
+    foundedYear: 2010,
+    description: "专注热带果蔬休闲食品出口，椰枣、芒果干等产品在东盟市场占有率高。",
+    exportRegions: ["东盟", "中东"],
+    businessType: "专业贸易商",
+    qualifications: ["出口食品生产备案"],
+    services: ["支持样品单", "支持拼柜", "可代办清关"],
+    annualCapacity: "5000吨",
+    exportCountries: 10,
+    employeeCount: "300+",
+    isTangyuanhui: false,
+    productImages: ["/media/product-sesame-bread.jpg", "/media/product-chili-sauce.jpg"],
+  },
+  {
+    id: "s10",
+    name: "Gansu Noodle Master",
+    logo: "GN",
+    tier: "认证",
+    categories: ["清真预制菜", "米面粮油"],
+    certs: ["HALAL", "GSO"],
+    exportVolume: "$1.5M+",
+    location: "甘肃",
+    foundedYear: 2018,
+    description: "传承西北面食工艺，专注清真拉面、面制品出口，支持定制化生产。",
+    exportRegions: ["东盟", "中东"],
+    businessType: "OEM/ODM代工厂",
+    qualifications: ["出口食品生产备案", "SC生产许可"],
+    services: ["支持样品单", "支持OEM"],
+    annualCapacity: "3000吨",
+    exportCountries: 5,
+    employeeCount: "100+",
+    isTangyuanhui: false,
+    productImages: ["/media/product-instant-soup.jpg"],
+    isNew: true,
+  },
 ];
 
 export const services: Service[] = [
@@ -259,6 +479,140 @@ export const filterOrigins = [
   { id: "甘肃", label: "甘肃" },
 ];
 
+export const filterBusinessTypes = [
+  { id: "源头生产工厂", label: "源头生产工厂" },
+  { id: "品牌运营商", label: "品牌运营商" },
+  { id: "OEM/ODM代工厂", label: "OEM/ODM 代工厂" },
+  { id: "专业贸易商", label: "专业贸易商" },
+];
+
+export const filterSupplierQualifications = [
+  { id: "出口食品生产备案", label: "出口食品生产备案" },
+  { id: "AEO认证", label: "AEO 认证" },
+  { id: "SC生产许可", label: "SC 生产许可" },
+  { id: "HACCP", label: "HACCP" },
+  { id: "ISO22000", label: "ISO22000" },
+  { id: "有机认证", label: "有机认证" },
+];
+
+export const supplierHotSearchTags = [
+  "JAKIM 认证工厂",
+  "清真冻品源头厂",
+  "出口备案企业",
+  "山东清真产业带",
+  "支持 OEM 代工厂",
+  "AEO 认证企业",
+  "牛羊肉出口厂",
+  "速冻调理品工厂",
+];
+
+export interface IndustryBelt {
+  id: string;
+  name: string;
+  region: string;
+  advantageCategories: string[];
+  supplierCount: number;
+  description: string;
+  supplierLogos: string[];
+}
+
+export const industryBelts: IndustryBelt[] = [
+  {
+    id: "ib1",
+    name: "山东清真调理产业带",
+    region: "山东 · 济南/青岛/潍坊",
+    advantageCategories: ["速冻调理品", "清真预制菜", "面制品"],
+    supplierCount: 320,
+    description: "北方最大速冻调理产业集群，配套完善，出口基础设施成熟",
+    supplierLogos: ["HF", "OD"],
+  },
+  {
+    id: "ib2",
+    name: "河北清真禽肉产业带",
+    region: "河北 · 沧州/保定",
+    advantageCategories: ["清真禽肉", "速冻肉丸", "调理肉制品"],
+    supplierCount: 180,
+    description: "华北最大清真禽肉出口基地，年出口量占全国20%以上",
+    supplierLogos: ["HP"],
+  },
+  {
+    id: "ib3",
+    name: "西北牛羊肉产业带",
+    region: "宁夏 · 新疆 · 甘肃",
+    advantageCategories: ["牛羊肉制品", "休闲食品"],
+    supplierCount: 150,
+    description: "天然牧场资源优势，清真牛羊肉品质享誉海内外",
+    supplierLogos: ["XB", "GH", "GN"],
+  },
+  {
+    id: "ib4",
+    name: "河南面制品产业带",
+    region: "河南 · 郑州/新乡",
+    advantageCategories: ["速冻面点", "清真预制菜", "调味品"],
+    supplierCount: 210,
+    description: "全国最大清真面制品生产基地，供应链成本优势明显",
+    supplierLogos: ["OD"],
+  },
+];
+
+export const supplierValueBadges = [
+  { id: "svb1", title: "合规严选准入", description: "全量核验清真认证 + 出口备案，源头保障资质真实有效" },
+  { id: "svb2", title: "出口能力认证", description: "优先展示具备实际出口经验、熟悉海外合规的成熟工厂" },
+  { id: "svb3", title: "全链路服务兜底", description: "报关 / 冷链 / 清关一站式代办，工厂只管生产，交付全程无忧" },
+  { id: "svb4", title: "线下实体验真", description: "棠源汇展厅常驻展示，支持现场看样、验厂、面对面洽谈" },
+];
+
+export const supplierSortOptions = [
+  { value: "default", label: "综合排序" },
+  { value: "tier", label: "会员等级优先" },
+  { value: "newest", label: "最新入驻" },
+  { value: "inquiry", label: "询盘量最高" },
+  { value: "export", label: "出口额最高" },
+] as const;
+
+export type SupplierSortOption = (typeof supplierSortOptions)[number]["value"];
+
+export const supplierPageSize = [20, 40] as const;
+export type SupplierPageSize = (typeof supplierPageSize)[number];
+
+export const supplierCategoryTabs = [
+  {
+    id: "category",
+    label: "按主营品类",
+    options: categories.map((c) => ({ id: c.id, label: c.name, count: subcategories.filter((s) => s.categoryId === c.id).reduce((sum, s) => sum + s.count, 0) })),
+  },
+  {
+    id: "cert",
+    label: "按认证类型",
+    options: [
+      { id: "JAKIM", label: "JAKIM 认证", count: 45 },
+      { id: "GSO", label: "GSO 海湾认证", count: 32 },
+      { id: "IFANCA", label: "IFANCA 认证", count: 18 },
+      { id: "HALAL", label: "国内 HALAL 认证", count: 120 },
+      { id: "出口备案", label: "出口食品生产备案", count: 86 },
+    ],
+  },
+  {
+    id: "type",
+    label: "按企业类型",
+    options: [
+      { id: "源头生产工厂", label: "源头生产工厂", count: 68 },
+      { id: "品牌运营商", label: "品牌运营商", count: 25 },
+      { id: "OEM/ODM代工厂", label: "OEM/ODM 代工厂", count: 42 },
+      { id: "专业贸易商", label: "专业贸易商", count: 30 },
+    ],
+  },
+  {
+    id: "belt",
+    label: "按核心产业带",
+    options: [
+      { id: "山东", label: "山东清真调理产业带", count: 320 },
+      { id: "河北", label: "河北清真禽肉产业带", count: 180 },
+      { id: "西北", label: "西北牛羊肉产业带", count: 150 },
+      { id: "河南", label: "河南面制品产业带", count: 210 },
+    ],
+  },
+];
 export const hotSearchTags = [
   "清真鱼豆腐",
   "清真冻鸭",
