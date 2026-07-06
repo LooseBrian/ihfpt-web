@@ -3,15 +3,16 @@ import { UserPlus, Search } from "lucide-react";
 
 export function CTASection() {
   return (
-    <section className="py-16 bg-brand-600 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-      </div>
+    <section className="py-16 relative overflow-hidden">
+      {/* Background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url('/media/cta-banner-bg.png')`,
+        }}
+      />
+      {/* Dark overlay for text readability */}
+      <div className="absolute inset-0 bg-brand-900/60" />
 
       <div className="container mx-auto px-4 relative">
         <div className="max-w-2xl mx-auto text-center">
@@ -34,8 +35,7 @@ export function CTASection() {
             </Button>
             <Button
               size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white/10 px-8 gap-2 w-full sm:w-auto"
+              className="bg-white/10 hover:bg-white/20 text-white border border-white px-8 gap-2 w-full sm:w-auto"
             >
               <Search className="h-5 w-5" />
               采购商快速注册
