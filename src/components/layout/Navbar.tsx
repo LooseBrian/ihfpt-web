@@ -13,8 +13,13 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
       <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-        {/* Logo */}
-        <a href="/" className="flex items-center gap-2 shrink-0">
+        {/* Logo — hidden on mobile when search is open */}
+        <a
+          href="/"
+          className={`flex items-center gap-2 shrink-0 ${
+            searchOpen ? "hidden md:flex" : "flex"
+          }`}
+        >
           <img
             src="/logo-icon-navbar.png"
             alt="IHFTP"
@@ -41,18 +46,22 @@ export function Navbar() {
         </nav>
 
         {/* Search + Mobile Menu */}
-        <div className="flex items-center gap-2">
+        <div
+          className={`flex items-center gap-2 ${
+            searchOpen ? "flex-1 md:flex-none" : ""
+          }`}
+        >
           {searchOpen ? (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 flex-1 md:flex-none">
               <Input
                 placeholder="搜索产品 / 供应商 / 资质..."
-                className="w-48 md:w-64 h-9"
+                className="flex-1 md:w-64 h-9"
                 autoFocus
               />
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 shrink-0"
                 onClick={() => setSearchOpen(false)}
               >
                 <X className="h-4 w-4" />
@@ -69,8 +78,13 @@ export function Navbar() {
             </Button>
           )}
 
+          {/* Mobile menu — hidden when search is open */}
           <Sheet>
-            <SheetTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-lg hover:bg-muted text-foreground lg:hidden">
+            <SheetTrigger
+              className={`items-center justify-center h-9 w-9 rounded-lg hover:bg-muted text-foreground lg:hidden ${
+                searchOpen ? "hidden" : "flex"
+              }`}
+            >
               <Menu className="h-5 w-5" />
             </SheetTrigger>
             <SheetContent side="right" className="w-72">

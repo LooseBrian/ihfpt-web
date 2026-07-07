@@ -413,7 +413,7 @@ export const navLinks = [
   { label: "产品大厅", labelEn: "Products", href: "/products" },
   { label: "优质供应商", labelEn: "Suppliers", href: "/suppliers" },
   { label: "服务中心", labelEn: "Services", href: "/services" },
-  { label: "产业生态", labelEn: "Ecosystem", href: "#projects" },
+  { label: "产业生态", labelEn: "Ecosystem", href: "/ecosystem" },
   { label: "资讯动态", labelEn: "News", href: "#news" },
   { label: "关于我们", labelEn: "About", href: "/about" },
   { label: "联系我们", labelEn: "Contact", href: "#contact" },
@@ -1103,4 +1103,364 @@ export const serviceHotSearchTags = [
   "BPJPH 准入",
   "信用证议付",
   "MIHAS 展会",
+];
+
+// ==================== 产业生态数据 ====================
+
+export interface EcosystemValueBadge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export const ecosystemValueBadges: EcosystemValueBadge[] = [
+  {
+    id: "evb1",
+    title: "国家战略支撑",
+    description: "国家级协会主办，对接「一带一路」与 RCEP 政策红利，享有政府间合作通道",
+    icon: "Landmark",
+  },
+  {
+    id: "evb2",
+    title: "全链条产业闭环",
+    description: "覆盖原料、生产、认证、物流、渠道、金融全链路，构建「贸易+服务+生态」完整闭环",
+    icon: "Workflow",
+  },
+  {
+    id: "evb3",
+    title: "全球资源网络",
+    description: "链接中国优质清真食品产能与全球穆斯林消费市场，辐射东盟、中东、北非、中亚",
+    icon: "Globe",
+  },
+  {
+    id: "evb4",
+    title: "生态协同共赢",
+    description: "政府、协会、企业、机构多方协同的开放生态体系，共建共享清真产业价值网络",
+    icon: "Network",
+  },
+];
+
+export interface EcosystemPark {
+  id: string;
+  name: string;
+  nameEn: string;
+  type: "domestic" | "overseas";
+  location: string;
+  description: string;
+  highlights: string[];
+  stats: { label: string; value: string }[];
+}
+
+export const ecosystemParks: EcosystemPark[] = [
+  {
+    id: "ep1",
+    name: "马来西亚双国双园",
+    nameEn: "Malaysia Twin Industrial Parks",
+    type: "overseas",
+    location: "马来西亚 · 关丹/马中关丹产业园",
+    description: "中马两国政府共建的标志性合作项目，集清真食品生产、加工、认证、冷链物流于一体，享有税收优惠与贸易便利化政策，直接辐射东盟十国 6 亿穆斯林消费市场。",
+    highlights: ["中马政府间合作", "税收优惠政策", "东盟市场辐射", "清真认证互认"],
+    stats: [
+      { label: "入驻企业", value: "60+" },
+      { label: "规划面积", value: "12 km²" },
+      { label: "年产值", value: "50亿+" },
+      { label: "辐射市场", value: "东盟10国" },
+    ],
+  },
+  {
+    id: "ep2",
+    name: "临夏清真产业园",
+    nameEn: "Linxia Halal Industrial Park",
+    type: "domestic",
+    location: "中国 · 甘肃临夏回族自治州",
+    description: "中国西北最大的清真食品产业基地，依托临夏回族自治州深厚的穆斯林文化底蕴，拥有完整的清真食品产业链和国家级出口资质，产品远销中东、北非。",
+    highlights: ["国家级出口资质", "完整产业链", "文化底蕴深厚", "西北枢纽节点"],
+    stats: [
+      { label: "入驻企业", value: "120+" },
+      { label: "占地面积", value: "8 km²" },
+      { label: "年产值", value: "35亿+" },
+      { label: "出口国家", value: "18国" },
+    ],
+  },
+  {
+    id: "ep3",
+    name: "宁夏清真产业园",
+    nameEn: "Ningxia Halal Industrial Park",
+    type: "domestic",
+    location: "中国 · 宁夏银川综合保税区",
+    description: "中国清真产业集聚区与内陆开放型经济试验区核心，面向阿拉伯国家和伊斯兰世界开展经贸合作，建有清真食品认证中心与国际经贸合作通道。",
+    highlights: ["内陆开放试验区", "阿拉伯市场对接", "认证中心驻点", "保税加工"],
+    stats: [
+      { label: "入驻企业", value: "85+" },
+      { label: "占地面积", value: "5 km²" },
+      { label: "年产值", value: "22亿+" },
+      { label: "出口国家", value: "15国" },
+    ],
+  },
+  {
+    id: "ep4",
+    name: "印尼Morowali产业园区",
+    nameEn: "Indonesia Morowali Industrial Park",
+    type: "overseas",
+    location: "印度尼西亚 · 中苏拉威西Morowali",
+    description: "中印尼产业合作的重要节点园区，依托印尼丰富农业资源与本地加工能力，聚焦清真食品原料供应与初加工，享有印尼工业园区税收减免政策。",
+    highlights: ["中印尼合作", "原料产地直供", "本地加工", "税收减免"],
+    stats: [
+      { label: "入驻企业", value: "40+" },
+      { label: "规划面积", value: "10 km²" },
+      { label: "年产值", value: "28亿+" },
+      { label: "辐射市场", value: "印尼2.7亿人口" },
+    ],
+  },
+];
+
+export interface EcosystemPartnerCategory {
+  id: string;
+  name: string;
+  nameEn: string;
+  icon: string;
+  description: string;
+  partners: { name: string; role: string }[];
+}
+
+export const ecosystemPartnerCategories: EcosystemPartnerCategory[] = [
+  {
+    id: "gov",
+    name: "政府机构",
+    nameEn: "Government Agencies",
+    icon: "Landmark",
+    description: "对接中国及目标市场国政府监管部门，打通政策通道与贸易便利化",
+    partners: [
+      { name: "中国食品药品企业质量安全促进会", role: "主办单位" },
+      { name: "中国-东盟特色产业链出海平台专委会", role: "运营单位" },
+      { name: "海关总署", role: "出口备案核验" },
+      { name: "国家市场监督管理总局", role: "食品安全监管" },
+      { name: "商务部对外贸易司", role: "贸易政策对接" },
+      { name: "马来西亚贸工部(MITI)", role: "中马合作通道" },
+      { name: "印尼海洋与投资统筹部", role: "中印尼合作" },
+    ],
+  },
+  {
+    id: "assoc",
+    name: "行业协会",
+    nameEn: "Industry Associations",
+    icon: "Users",
+    description: "联合国内外清真食品行业协会，构建行业自律与标准互通体系",
+    partners: [
+      { name: "中国伊斯兰协会", role: "国内清真标准" },
+      { name: "马来西亚清真产业推广机构(HDC)", role: "马来西亚对接" },
+      { name: "印尼清真认证机构(BPJPH)", role: "印尼认证" },
+      { name: "中国食品工业协会", role: "食品行业标准" },
+      { name: "山东省清真食品行业协会", role: "产业带支撑" },
+      { name: "宁夏清真食品国际贸易商会", role: "宁夏产业带" },
+    ],
+  },
+  {
+    id: "cert",
+    name: "认证机构",
+    nameEn: "Certification Bodies",
+    icon: "ShieldCheck",
+    description: "覆盖全球主流 HALAL 认证机构，保障证书权威性与国际互认",
+    partners: [
+      { name: "JAKIM（马来西亚）", role: "东南亚权威认证" },
+      { name: "BPJPH / MUI（印尼）", role: "印尼官方认证" },
+      { name: "GSO（海湾标准化组织）", role: "海湾六国认证" },
+      { name: "IFANCA（美国）", role: "北美认证" },
+      { name: "SFDA（沙特食药监）", role: "沙特准入" },
+      { name: "中国伊斯兰协会认证", role: "国内认证" },
+    ],
+  },
+  {
+    id: "logistics",
+    name: "物流服务商",
+    nameEn: "Logistics Partners",
+    icon: "Truck",
+    description: "整合跨境海运、空运、冷链、海外仓资源，保障清真食品交付时效与品质",
+    partners: [
+      { name: "中远海运集团", role: "海运干线" },
+      { name: "顺丰国际", role: "跨境快递" },
+      { name: "菜鸟国际", role: "海外仓配" },
+      { name: "中外运冷链", role: "冷链温控" },
+      { name: "DHL Global Forwarding", role: "国际空运" },
+      { name: "嘉里物流(Kerry Logistics)", role: "东南亚配送" },
+    ],
+  },
+  {
+    id: "finance",
+    name: "金融机构",
+    nameEn: "Financial Institutions",
+    icon: "Banknote",
+    description: "对接信保、银行、跨境支付机构，提供全流程资金保障与风险管控",
+    partners: [
+      { name: "中国出口信用保险公司", role: "出口信保" },
+      { name: "中国进出口银行", role: "贸易融资" },
+      { name: "中国银行(跨境金融)", role: "跨境结算" },
+      { name: "工商银行(国际部)", role: "信用证业务" },
+      { name: "连连支付(国际)", role: "跨境支付" },
+      { name: "PingPong金融", role: "外贸收款" },
+    ],
+  },
+];
+
+export interface EcosystemExpert {
+  id: string;
+  name: string;
+  title: string;
+  field: string;
+  organization: string;
+  bio: string;
+}
+
+export const ecosystemExperts: EcosystemExpert[] = [
+  {
+    id: "ex1",
+    name: "李明远",
+    title: "主任委员",
+    field: "清真食品国际贸易",
+    organization: "中国食品药品企业质量安全促进会",
+    bio: "从事清真食品国际贸易 30 余年，主导中马、中印尼多项政府间清真产业合作项目，深度参与 RCEP 框架下清真食品贸易规则制定。",
+  },
+  {
+    id: "ex2",
+    name: "Ahmad bin Ibrahim",
+    title: "特聘顾问",
+    field: "HALAL 认证体系",
+    organization: "马来西亚清真产业推广机构(HDC)",
+    bio: "前 JAKIM 高级审核官，国际清真认证领域权威专家，主持制定多项东南亚清真认证标准，拥有 25 年清真认证实务经验。",
+  },
+  {
+    id: "ex3",
+    name: "王建华",
+    title: "副主任委员",
+    field: "跨境供应链与冷链物流",
+    organization: "中外运冷链物流有限公司",
+    bio: "跨境冷链物流专家，主导建设多条中国至东南亚/中东冷链直通航线，在清真食品冷链运输与温控管理领域有丰富实战经验。",
+  },
+  {
+    id: "ex4",
+    name: "Fatimah binti Hassan",
+    title: "特聘顾问",
+    field: "中东市场拓展",
+    organization: "沙特 Lulu 集团采购体系",
+    bio: "中东零售市场资深顾问，长期对接沙特、阿联酋连锁商超采购体系，熟悉海湾国家食品准入与渠道拓展策略。",
+  },
+  {
+    id: "ex5",
+    name: "张志强",
+    title: "委员",
+    field: "出口金融与信保",
+    organization: "中国出口信用保险公司",
+    bio: "贸易金融专家，从事出口信保业务 20 年，擅长清真食品出口企业风险评估、信用额度审批与应收账款保障方案设计。",
+  },
+  {
+    id: "ex6",
+    name: "Rahmat Hidayat",
+    title: "特聘顾问",
+    field: "印尼市场准入",
+    organization: "印尼海洋与投资统筹部",
+    bio: "印尼食品准入与投资政策专家，深度参与中印尼产业园区合作，熟悉 BPJPH 认证流程与印尼清真食品进口监管体系。",
+  },
+];
+
+export interface EcosystemAllianceTier {
+  id: string;
+  name: string;
+  nameEn: string;
+  description: string;
+  members: string[];
+  icon: string;
+}
+
+export const ecosystemAllianceTiers: EcosystemAllianceTier[] = [
+  {
+    id: "at1",
+    name: "原料供应端",
+    nameEn: "Raw Material Supply",
+    description: "覆盖牛羊肉、禽肉、粮油、调味料等核心原料的源头供应基地",
+    members: ["西北牧场联盟", "山东调理原料基地", "宁夏粮油集团", "进口香料供应链"],
+    icon: "Wheat",
+  },
+  {
+    id: "at2",
+    name: "生产加工端",
+    nameEn: "Manufacturing & Processing",
+    description: "具备 HALAL 认证与出口备案资质的生产加工企业矩阵",
+    members: ["惠发食品", "双汇清真", "安井清真", "中原食品集团"],
+    icon: "Factory",
+  },
+  {
+    id: "at3",
+    name: "包装与印刷",
+    nameEn: "Packaging & Printing",
+    description: "清真合规包装材料与阿拉伯语/英语包装印刷服务商",
+    members: ["华源包装", "阿拉伯语印刷中心", "清真合规包材供应商"],
+    icon: "Package",
+  },
+  {
+    id: "at4",
+    name: "冷链物流端",
+    nameEn: "Cold Chain Logistics",
+    description: "跨境冷链运输、海外仓储、目的地清关配送一体化物流网络",
+    members: ["中远海运冷链", "嘉里物流东南亚", "菜鸟海外仓", "DHL空运"],
+    icon: "Truck",
+  },
+  {
+    id: "at5",
+    name: "渠道零售端",
+    nameEn: "Retail & Distribution",
+    description: "海外连锁商超、餐饮渠道、电商平台多终端零售网络",
+    members: ["Lulu连锁商超", "Noon电商", "Carrefour中东", "印尼Alfamart"],
+    icon: "Store",
+  },
+];
+
+export interface EcosystemFAQItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export const ecosystemFAQs: EcosystemFAQItem[] = [
+  {
+    id: "efaq1",
+    question: "产业生态板块面向哪些用户？",
+    answer: "产业生态面向全角色用户开放。采购商可了解标杆园区与合作生态资源；供应商可对接产业联盟上下游伙伴；政府与协会机构可了解平台生态布局并寻求合作；投资者与行业研究者可获取清真产业生态全景信息。",
+  },
+  {
+    id: "efaq2",
+    question: "如何入驻标杆产业园区？",
+    answer: "平台关联的马来西亚双国双园、临夏清真产业园、宁夏清真产业园等园区均设有入驻通道。供应商可在产业生态页面提交入驻意向，平台将对接园区管委会，协助评估企业资质、协调政策优惠、办理入驻手续。",
+  },
+  {
+    id: "efaq3",
+    question: "合作生态矩阵中的机构如何接入？",
+    answer: "平台已与政府机构、行业协会、认证机构、物流服务商、金融机构建立了合作通道。供应商通过平台服务中心即可在线发起对接需求，平台将根据具体需求匹配对应合作机构，全程协助沟通协调。",
+  },
+  {
+    id: "efaq4",
+    question: "专家委员会提供哪些服务？",
+    answer: "专家委员会为平台提供战略咨询、政策解读、认证指导、市场分析等智力支持。供应商可通过平台预约专家一对一咨询，涵盖市场准入策略、认证方案优化、渠道拓展规划、供应链设计等专业领域。",
+  },
+  {
+    id: "efaq5",
+    question: "产业联盟的加入条件是什么？",
+    answer: "产业联盟面向清真食品产业链上下游企业开放，加入条件包括：合法注册企业、具备清真食品相关业务资质、认同平台生态合作理念。生产加工端企业需具备 HALAL 认证或出口备案资质。申请经平台审核通过后即可加入联盟。",
+  },
+  {
+    id: "efaq6",
+    question: "平台如何保障生态合作的落地执行？",
+    answer: "平台建立标准化的生态合作流程：需求对接 → 资质核验 → 方案匹配 → 协议签订 → 执行跟踪 → 效果评估。全程在线可视，关键节点有平台顾问跟进，保障合作项目落地执行与持续优化。",
+  },
+];
+
+export const ecosystemHotSearchTags = [
+  "双国双园",
+  "HALAL 认证",
+  "中马合作",
+  "产业联盟",
+  "专家智库",
+  "海外仓",
+  "出口信保",
+  "Lulu 渠道",
 ];
