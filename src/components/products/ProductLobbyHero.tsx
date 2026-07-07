@@ -7,12 +7,16 @@ import { hotSearchTags } from "@/lib/data";
 
 export function ProductLobbyHero() {
   return (
-    <section className="relative bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 text-white py-16 md:py-24 overflow-hidden">
-      {/* Decorative pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 right-0 w-64 h-64 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
-      </div>
+    <section className="relative text-white py-16 md:py-24 overflow-hidden">
+      {/* Background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url('/media/product-hero-bg.png')`,
+        }}
+      />
+      {/* Dark overlay for text readability */}
+      <div className="absolute inset-0 bg-brand-900/60" />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
