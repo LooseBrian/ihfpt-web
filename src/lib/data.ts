@@ -412,7 +412,7 @@ export const navLinks = [
   { label: "首页", labelEn: "Home", href: "/" },
   { label: "产品大厅", labelEn: "Products", href: "/products" },
   { label: "优质供应商", labelEn: "Suppliers", href: "/suppliers" },
-  { label: "服务中心", labelEn: "Services", href: "#services" },
+  { label: "服务中心", labelEn: "Services", href: "/services" },
   { label: "产业生态", labelEn: "Ecosystem", href: "#projects" },
   { label: "资讯动态", labelEn: "News", href: "#news" },
   { label: "关于我们", labelEn: "About", href: "/about" },
@@ -622,4 +622,485 @@ export const hotSearchTags = [
   "咖喱酱",
   "清真预制菜",
   "中东出口",
+];
+
+// ==================== 服务中心数据 ====================
+
+export interface ServiceCategoryItem {
+  id: string;
+  name: string;
+  nameEn: string;
+  icon: string;
+  description: string;
+  highlight: string;
+}
+
+export const serviceCategories: ServiceCategoryItem[] = [
+  {
+    id: "compliance",
+    name: "合规认证",
+    nameEn: "Compliance & Certification",
+    icon: "ShieldCheck",
+    description: "国际 HALAL 认证代办、各国食品准入资质、出口备案一站式办理，源头保障合规准入",
+    highlight: "覆盖 JAKIM / GSO / IFANCA / SFDA / FDA 等主流认证机构",
+  },
+  {
+    id: "logistics",
+    name: "物流仓储",
+    nameEn: "Logistics & Warehousing",
+    icon: "Truck",
+    description: "冷链双清包税、海外仓配、全程温控追踪，保障清真食品品质与交付时效",
+    highlight: "海运 / 空运 / 海外仓全链路，目的地国清关配送",
+  },
+  {
+    id: "channel",
+    name: "渠道拓展",
+    nameEn: "Channel Expansion",
+    icon: "Globe",
+    description: "海外商超对接、餐饮连锁合作、电商平台入驻，快速打开目标穆斯林市场",
+    highlight: "东盟 / 中东 / 北非 / 中亚四大市场精准渠道资源",
+  },
+  {
+    id: "finance",
+    name: "金融配套",
+    nameEn: "Financial Services",
+    icon: "Landmark",
+    description: "出口信保、跨境结算、信用证、供应链金融，降低国际贸易风险",
+    highlight: "对接信保公司 / 银行 / 跨境支付机构，全流程资金保障",
+  },
+];
+
+export interface ServiceItem {
+  id: string;
+  categoryId: string;
+  name: string;
+  nameEn: string;
+  description: string;
+  duration: string;
+  price: string;
+  materials: string[];
+  process: string[];
+  isHot: boolean;
+  icon: string;
+  tags: string[];
+}
+
+export const serviceItems: ServiceItem[] = [
+  // 合规认证类
+  {
+    id: "sc-c1",
+    categoryId: "compliance",
+    name: "国际 HALAL 认证代办",
+    nameEn: "International HALAL Certification",
+    description: "代办 JAKIM（马来西亚）、GSO（海湾）、IFANCA（美国）、MUI（印尼）等国际权威清真认证，全程对接认证机构与清真监督委员会，保障证书真实有效。",
+    duration: "30-90 个工作日",
+    price: "按认证机构与产品类别报价",
+    materials: ["企业营业执照", "产品配方与原料清单", "生产工艺流程图", "厂房清真环境证明", "原料供应商资质"],
+    process: ["需求评估", "资料准备", "机构对接", "现场审核", "证书颁发", "归档核验"],
+    isHot: true,
+    icon: "ShieldCheck",
+    tags: ["JAKIM", "GSO", "IFANCA", "MUI"],
+  },
+  {
+    id: "sc-c2",
+    categoryId: "compliance",
+    name: "各国食品准入资质申请",
+    nameEn: "Food Import Qualification",
+    description: "办理沙特 SFDA、美国 FDA、欧盟 CE、印尼 BPJPH 等目标市场食品准入注册，确保产品合规进入目的国市场。",
+    duration: "45-120 个工作日",
+    price: "按目标国与产品类别报价",
+    materials: ["企业资质文件", "产品检测报告", "原产地证明", "清真认证证书", "包装标签样稿"],
+    process: ["目标国准入评估", "注册方案制定", "资料编制提交", "官方沟通跟进", "注册证书下发"],
+    isHot: true,
+    icon: "FileCheck",
+    tags: ["SFDA", "FDA", "BPJPH", "CE"],
+  },
+  {
+    id: "sc-c3",
+    categoryId: "compliance",
+    name: "出口食品生产企业备案",
+    nameEn: "Export Filing Registration",
+    description: "办理海关出口食品生产企业备案，对接海关总署系统，完成电子口岸注册，获取出口资质编号。",
+    duration: "15-30 个工作日",
+    price: "服务费 3000-8000 元",
+    materials: ["营业执照副本", "食品生产许可证", "厂区平面图", "质量管理体系文件", "检验设备清单"],
+    process: ["资质初审", "资料编制", "海关系统申报", "现场核查配合", "备案证书获取"],
+    isHot: false,
+    icon: "Building2",
+    tags: ["海关备案", "电子口岸"],
+  },
+  {
+    id: "sc-c4",
+    categoryId: "compliance",
+    name: "HACCP / ISO22000 体系认证",
+    nameEn: "HACCP & ISO22000 Certification",
+    description: "辅导企业建立 HACCP 危害分析与关键控制点体系、ISO22000 食品安全管理体系，并通过权威机构认证审核。",
+    duration: "60-90 个工作日",
+    price: "服务费 15000-35000 元",
+    materials: ["企业组织架构", "产品工艺流程", "质量手册草案", "生产现场记录", "人员培训档案"],
+    process: ["体系诊断", "文件编制", "全员培训", "体系试运行", "内审管评", "外部认证审核"],
+    isHot: false,
+    icon: "ClipboardCheck",
+    tags: ["HACCP", "ISO22000", "体系认证"],
+  },
+
+  // 物流仓储类
+  {
+    id: "sc-l1",
+    categoryId: "logistics",
+    name: "冷链双清包税",
+    nameEn: "Cold-Chain Dual Clearance",
+    description: "提供冷链海运 / 空运双清包税服务，覆盖中国出口报关 + 目的国清关包税派送，全程温控保障清真食品品质。",
+    duration: "海运 25-40 天 / 空运 3-7 天",
+    price: "按航线与货量报价",
+    materials: ["贸易合同", "商业发票", "装箱单", "原产地证", "清真认证副本"],
+    process: ["订舱排期", "出口报关", "国际运输", "目的国清关", "冷链派送", "签收确认"],
+    isHot: true,
+    icon: "Ship",
+    tags: ["海运", "空运", "双清包税", "冷链温控"],
+  },
+  {
+    id: "sc-l2",
+    categoryId: "logistics",
+    name: "海外仓配服务",
+    nameEn: "Overseas Warehousing",
+    description: "在马来西亚、印尼、阿联酋、沙特等核心市场提供海外仓储与本地配送服务，支持一件代发、库存实时同步。",
+    duration: "入库 3-5 个工作日",
+    price: "仓储费 + 操作费 + 配送费",
+    materials: ["入库清单", "产品合规文件", "库存系统对接", "目的地国清关凭证"],
+    process: ["仓库预约", "货物入库", "系统上架", "订单处理", "本地配送", "库存盘点"],
+    isHot: true,
+    icon: "Warehouse",
+    tags: ["马来西亚仓", "阿联酋仓", "印尼仓", "一件代发"],
+  },
+  {
+    id: "sc-l3",
+    categoryId: "logistics",
+    name: "目的国清关配送",
+    nameEn: "Destination Clearance & Delivery",
+    description: "提供目的国专业清关服务，熟悉当地食品进口法规与清关流程，对接本地持牌清关行，保障货物快速放行。",
+    duration: "3-10 个工作日",
+    price: "按货值与目的国报价",
+    materials: ["提单 / 空运单", "商业发票", "装箱单", "原产地证", "清真认证", "进口许可证"],
+    process: ["单证预审", "到港换单", "海关申报", "查验配合", "税费缴纳", "提货派送"],
+    isHot: false,
+    icon: "PackageCheck",
+    tags: ["清关行", "本地配送", "税费代办"],
+  },
+  {
+    id: "sc-l4",
+    categoryId: "logistics",
+    name: "全程温控追踪",
+    nameEn: "Full-Temperature Tracking",
+    description: "为冷链货物配备物联网温湿度记录仪，全程实时监控并预警，到港出具完整温度报告，保障清真食品合规可追溯。",
+    duration: "随主运输全程",
+    price: "记录仪租赁 + 数据服务",
+    materials: ["货物信息", "温控要求", "运输路线"],
+    process: ["温控方案制定", "记录仪配置", "装箱启运", "全程监控", "到港报告出具"],
+    isHot: false,
+    icon: "Thermometer",
+    tags: ["IoT 温控", "实时追踪", "温度报告"],
+  },
+
+  // 渠道拓展类
+  {
+    id: "sc-ch1",
+    categoryId: "channel",
+    name: "海外商超对接",
+    nameEn: "Overseas Retail Matching",
+    description: "对接马来西亚 Lotus's、印尼 Indomaret、沙特 Lulu、阿联酋 Carrefour 等主流穆斯林市场连锁商超采购体系。",
+    duration: "对接周期 1-3 个月",
+    price: "服务费 + 交易佣金",
+    materials: ["企业资质", "产品资料", "报价单", "样品", "清真认证"],
+    process: ["渠道匹配", "资质审核", "样品送审", "采购谈判", "合同签订", "首单交付"],
+    isHot: true,
+    icon: "Store",
+    tags: ["Lotus's", "Indomaret", "Lulu", "Carrefour"],
+  },
+  {
+    id: "sc-ch2",
+    categoryId: "channel",
+    name: "餐饮连锁供应链合作",
+    nameEn: "F&B Chain Supply Cooperation",
+    description: "对接中东、东南亚清真餐饮连锁的中央厨房与供应链体系，建立长期稳定的大宗采购合作关系。",
+    duration: "对接周期 2-4 个月",
+    price: "服务费 + 年度佣金",
+    materials: ["产能证明", "质量体系文件", "产品标准", "报价方案", "案例资质"],
+    process: ["需求对接", "工厂审核", "样品测试", "标准确认", "合同签订", "稳定供货"],
+    isHot: false,
+    icon: "UtensilsCrossed",
+    tags: ["中央厨房", "大宗采购", "长期合作"],
+  },
+  {
+    id: "sc-ch3",
+    categoryId: "channel",
+    name: "电商平台入驻",
+    nameEn: "E-commerce Platform Onboarding",
+    description: "协助入驻 Shopee、Lazada、Amazon Halal、Noon 等目标市场主流电商平台，完成开店、资质审核、商品上架全流程。",
+    duration: "入驻周期 2-4 周",
+    price: "服务费 5000-15000 元",
+    materials: ["企业资质", "品牌授权书", "产品资料", "清真认证", "银行账户"],
+    process: ["平台选择", "资质准备", "店铺申请", "审核通过", "商品上架", "运营指导"],
+    isHot: false,
+    icon: "ShoppingCart",
+    tags: ["Shopee", "Lazada", "Noon", "Amazon"],
+  },
+  {
+    id: "sc-ch4",
+    categoryId: "channel",
+    name: "海外展会代参展",
+    nameEn: "Overseas Exhibition Service",
+    description: "代理参加马来西亚 MIHAS、迪拜 Gulfood、沙特 Foodex 等国际清真食品展会，提供展位、搭建、翻译、对接一站式服务。",
+    duration: "展会前 2-3 个月筹备",
+    price: "展位费 + 服务费",
+    materials: ["企业资质", "产品样品", "宣传资料", "签证护照"],
+    process: ["展会遴选", "展位预订", "物料筹备", "现场布展", "展会对接", "客户跟进"],
+    isHot: false,
+    icon: "CalendarDays",
+    tags: ["MIHAS", "Gulfood", "Foodex"],
+  },
+
+  // 金融配套类
+  {
+    id: "sc-f1",
+    categoryId: "finance",
+    name: "出口信用保险",
+    nameEn: "Export Credit Insurance",
+    description: "对接中国信保（Sinosure）出口信用保险，保障应收账款安全，承保买方破产、拖欠、政治风险等，最高赔付比例 90%。",
+    duration: "投保审批 5-10 个工作日",
+    price: "保费率 0.3%-1.2%",
+    materials: ["出口合同", "买方资信", "贸易历史记录", "企业财务报表"],
+    process: ["买方资信调查", "额度审批", "保单签订", "发货申报", "理赔保障"],
+    isHot: true,
+    icon: "ShieldPlus",
+    tags: ["中国信保", "应收账款保障", "政治风险"],
+  },
+  {
+    id: "sc-f2",
+    categoryId: "finance",
+    name: "跨境结算服务",
+    nameEn: "Cross-Border Settlement",
+    description: "提供多币种跨境结算服务，支持美元 / 人民币 / 林吉特 / 迪拉姆等结算，对接持牌跨境支付机构，T+1 到账。",
+    duration: "结算周期 T+1 至 T+3",
+    price: "手续费 0.1%-0.5%",
+    materials: ["贸易合同", "商业发票", "物流凭证", "企业外汇账户"],
+    process: ["订单核验", "外汇申报", "资金汇划", "到账确认", "单证归档"],
+    isHot: false,
+    icon: "Wallet",
+    tags: ["多币种", "T+1 到账", "持牌机构"],
+  },
+  {
+    id: "sc-f3",
+    categoryId: "finance",
+    name: "信用证审单议付",
+    nameEn: "Letter of Credit Advisory",
+    description: "提供信用证审单、交单、议付全流程服务，由资深单证专家把控单证质量，降低不符点扣费与拒付风险。",
+    duration: "审单 1-3 个工作日",
+    price: "议付费 0.125% 起",
+    materials: ["信用证正本", "全套运输单据", "商业发票", "装箱单", "保险单"],
+    process: ["信用证审核", "单证制备", "交单议付", "银行审单", "收汇结汇"],
+    isHot: false,
+    icon: "FileText",
+    tags: ["LC 审单", "不符点把控", "议付融资"],
+  },
+  {
+    id: "sc-f4",
+    categoryId: "finance",
+    name: "供应链金融",
+    nameEn: "Supply Chain Finance",
+    description: "基于贸易订单与应收账款提供融资服务，对接银行与保理公司，缓解供应商资金压力，账期最短 30 天。",
+    duration: "审批 7-15 个工作日",
+    price: "融资利率 4%-8%",
+    materials: ["贸易合同", "订单凭证", "应收账款", "企业财务资料"],
+    process: ["融资需求评估", "方案设计", "银行对接", "额度审批", "放款到账", "还款结清"],
+    isHot: false,
+    icon: "Banknote",
+    tags: ["订单融资", "应收账款保理", "账期 30+"],
+  },
+];
+
+export interface ServiceProcessStep {
+  id: string;
+  step: number;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export const serviceProcessSteps: ServiceProcessStep[] = [
+  {
+    id: "sp1",
+    step: 1,
+    title: "需求提交",
+    description: "在线选择服务项目并提交企业基础信息与需求描述",
+    icon: "FileInput",
+  },
+  {
+    id: "sp2",
+    step: 2,
+    title: "方案评估",
+    description: "平台服务顾问 1 个工作日内响应，出具定制化服务方案与报价",
+    icon: "ClipboardList",
+  },
+  {
+    id: "sp3",
+    step: 3,
+    title: "资料准备",
+    description: "按方案清单准备资质文件，平台协助资料编制与翻译",
+    icon: "FolderOpen",
+  },
+  {
+    id: "sp4",
+    step: 4,
+    title: "服务执行",
+    description: "对接认证机构 / 报关行 / 物流商等外部资源，全流程代办执行",
+    icon: "Settings",
+  },
+  {
+    id: "sp5",
+    step: 5,
+    title: "进度跟踪",
+    description: "全流程节点实时更新，支持在线查询办理进度与历史记录",
+    icon: "Activity",
+  },
+  {
+    id: "sp6",
+    step: 6,
+    title: "交付归档",
+    description: "证书 / 单证 / 报告等成果交付，电子档案统一归档可溯源",
+    icon: "PackageCheck",
+  },
+];
+
+export interface ServiceValueBadgeItem {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export const serviceValueBadges: ServiceValueBadgeItem[] = [
+  {
+    id: "svb-c1",
+    title: "官方背书可信",
+    description: "国家级协会主办，对接政府机构与权威认证组织，服务全程可追溯",
+    icon: "Award",
+  },
+  {
+    id: "svb-c2",
+    title: "全链路一站式",
+    description: "从合规认证到物流交付再到资金结算，一站式解决清真食品出海全流程需求",
+    icon: "Workflow",
+  },
+  {
+    id: "svb-c3",
+    title: "专业团队操盘",
+    description: "资深外贸、认证、报关、单证专家 1 对 1 服务，平均行业经验 10 年+",
+    icon: "Users",
+  },
+  {
+    id: "svb-c4",
+    title: "进度在线可视",
+    description: "服务工单全流程节点实时更新，支持在线查询办理进度与历史记录",
+    icon: "LineChart",
+  },
+];
+
+export interface ServiceCase {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  result: string;
+  client: string;
+  market: string;
+}
+
+export const serviceCases: ServiceCase[] = [
+  {
+    id: "case1",
+    title: "山东速冻调理品出口马来西亚",
+    category: "合规认证 + 冷链物流",
+    description: "为山东某速冻调理品工厂代办 JAKIM 认证与出口备案，并完成首批 40 尺冷链柜双清包税派送至吉隆坡。",
+    result: "认证周期缩短 35%，首单 45 天交付到港",
+    client: "山东惠发系食品企业",
+    market: "马来西亚",
+  },
+  {
+    id: "case2",
+    title: "宁夏牛羊肉进入中东商超",
+    category: "渠道拓展 + 信用保险",
+    description: "协助宁夏牛羊肉出口企业对接沙特 Lulu 连锁商超采购体系，并配套出口信保保障应收账款安全。",
+    result: "签订年度框架协议，首年订单 320 万美元",
+    client: "宁夏清真肉业集团",
+    market: "沙特阿拉伯",
+  },
+  {
+    id: "case3",
+    title: "调味品企业海外仓代发",
+    category: "海外仓配 + 电商入驻",
+    description: "为四川调味品企业在阿联酋设立海外仓，同步入驻 Noon 电商平台，实现本地一件代发。",
+    result: "履约时效从 30 天缩短至 3 天，复购率提升 60%",
+    client: "川调系出口企业",
+    market: "阿联酋",
+  },
+  {
+    id: "case4",
+    title: "预制菜全链路出海印尼",
+    category: "认证 + 物流 + 金融",
+    description: "为河南预制菜企业办理 BPJPH 准入与清真认证，配套冷链海运与信用证议付，完成全链路闭环交付。",
+    result: "全流程 90 天落地，累计出口 800 万元",
+    client: "中原食品集团",
+    market: "印度尼西亚",
+  },
+];
+
+export interface ServiceFAQItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export const serviceFAQs: ServiceFAQItem[] = [
+  {
+    id: "faq1",
+    question: "服务中心的服务对象是谁？",
+    answer: "服务中心面向平台入驻供应商及有清真食品出口需求的国内生产企业，提供从合规认证、跨境物流、渠道拓展到金融配套的一站式增值服务。采购商可享受免费的供需对接服务。",
+  },
+  {
+    id: "faq2",
+    question: "如何申请服务？流程是怎样的？",
+    answer: "在服务中心选择所需服务项目，点击「在线申请」提交企业信息与需求，平台服务顾问将在 1 个工作日内联系并出具方案。确认后即可签订服务协议，进入执行阶段，全程支持在线查询进度。",
+  },
+  {
+    id: "faq3",
+    question: "HALAL 认证办理一般需要多久？费用多少？",
+    answer: "国际 HALAL 认证办理周期因认证机构与产品类别而异，JAKIM 一般 60-90 个工作日，GSO 约 45-60 个工作日。费用根据产品数量与工艺复杂度报价，平台提供免费需求评估与报价方案。",
+  },
+  {
+    id: "faq4",
+    question: "冷链双清包税覆盖哪些国家？",
+    answer: "目前覆盖东盟（马来西亚、印尼、泰国）、中东（沙特、阿联酋、卡塔尔）、北非（埃及、摩洛哥）等核心穆斯林市场的海运与空运双清包税服务，支持全程冷链温控追踪。",
+  },
+  {
+    id: "faq5",
+    question: "出口信保的赔付比例与投保条件？",
+    answer: "通过中国信保投保出口信用保险，最高赔付比例达 90%，承保买方破产、拖欠及政治风险。投保需提供出口合同、买方资信及贸易历史记录，平台协助完成买方资信调查与额度审批。",
+  },
+  {
+    id: "faq6",
+    question: "服务进度如何查询？是否支持在线跟踪？",
+    answer: "所有服务工单均接入平台进度管理系统，从申请提交到交付归档的每个节点实时更新。供应商可在「我的服务」页面在线查询当前进度、历史记录与电子单证，全程透明可追溯。",
+  },
+];
+
+export const serviceHotSearchTags = [
+  "JAKIM 认证代办",
+  "冷链双清包税",
+  "出口信保",
+  "海外仓代发",
+  "Lulu 商超对接",
+  "BPJPH 准入",
+  "信用证议付",
+  "MIHAS 展会",
 ];

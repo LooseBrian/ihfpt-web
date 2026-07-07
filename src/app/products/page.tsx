@@ -18,6 +18,9 @@ import {
   type ViewMode,
 } from "@/components/products/ProductSortBar";
 import { ProductGrid } from "@/components/products/ProductGrid";
+import { ProductServicesSection } from "@/components/products/ProductServicesSection";
+import { ProductStatsSection } from "@/components/products/ProductStatsSection";
+import { CTASection } from "@/components/sections/CTASection";
 import { products, categories, subcategories } from "@/lib/data";
 
 function parsePrice(priceRange: string): number {
@@ -195,6 +198,10 @@ export default function ProductsPage() {
             </div>
           </div>
         </section>
+
+        <ProductServicesSection />
+        <ProductStatsSection />
+        <CTASection />
       </main>
       <Footer />
       <BackToTop />
