@@ -460,7 +460,7 @@ export const navLinks = [
   { label: "产业生态", labelEn: "Ecosystem", href: "/ecosystem" },
   { label: "资讯动态", labelEn: "News", href: "/news" },
   { label: "关于我们", labelEn: "About", href: "/about" },
-  { label: "联系我们", labelEn: "Contact", href: "#contact" },
+  { label: "联系我们", labelEn: "Contact", href: "/contact" },
 ];
 
 export const trustBadges = [

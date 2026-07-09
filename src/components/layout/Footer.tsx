@@ -22,19 +22,21 @@ export function Footer() {
             <h4 className="text-white font-semibold mb-4">快速导航</h4>
             <ul className="space-y-2 text-sm">
               {[
-                "首页",
-                "产品大厅",
-                "优质供应商",
-                "服务中心",
-                "产业生态",
-                "资讯动态",
+                { label: "首页", href: "/" },
+                { label: "产品大厅", href: "/products" },
+                { label: "优质供应商", href: "/suppliers" },
+                { label: "服务中心", href: "/services" },
+                { label: "产业生态", href: "/ecosystem" },
+                { label: "资讯动态", href: "/news" },
+                { label: "关于我们", href: "/about" },
+                { label: "联系我们", href: "/contact" },
               ].map((item) => (
-                <li key={item}>
+                <li key={item.label}>
                   <a
-                    href="#"
+                    href={item.href}
                     className="text-brand-200 hover:text-gold-400 transition-colors"
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}
