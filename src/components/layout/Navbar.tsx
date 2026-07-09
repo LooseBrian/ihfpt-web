@@ -11,7 +11,7 @@ export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
+    <header className="sticky top-10 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
       <div className="container mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo — hidden on mobile when search is open */}
         <a
@@ -105,13 +105,17 @@ export function Navbar() {
                   ))}
                 </nav>
                 <div className="border-t pt-4 flex flex-col gap-2">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Search className="h-4 w-4 mr-2" />
-                    采购商登录
-                  </Button>
-                  <Button className="w-full bg-brand-600 hover:bg-brand-700">
-                    供应商入驻
-                  </Button>
+                  <a href="/login?tab=buyer&mode=login" className="w-full">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Search className="h-4 w-4 mr-2" />
+                      采购商登录
+                    </Button>
+                  </a>
+                  <a href="/login?tab=supplier&mode=signup" className="w-full">
+                    <Button className="w-full bg-brand-600 hover:bg-brand-700">
+                      供应商入驻
+                    </Button>
+                  </a>
                 </div>
               </div>
             </SheetContent>

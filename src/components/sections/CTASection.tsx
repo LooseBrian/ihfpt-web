@@ -26,20 +26,24 @@ export function CTASection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              size="lg"
-              className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-bold px-8 gap-2 w-full sm:w-auto"
-            >
-              <UserPlus className="h-5 w-5" />
-              供应商入驻申请
-            </Button>
-            <Button
-              size="lg"
-              className="bg-white/10 hover:bg-white/20 text-white border border-white px-8 gap-2 w-full sm:w-auto"
-            >
-              <Search className="h-5 w-5" />
-              采购商快速注册
-            </Button>
+            <a href="/login?tab=supplier&mode=signup" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-bold px-8 gap-2 w-full sm:w-auto"
+              >
+                <UserPlus className="h-5 w-5" />
+                供应商入驻申请
+              </Button>
+            </a>
+            <a href="/login?tab=buyer&mode=signup" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white px-8 gap-2 w-full sm:w-auto"
+              >
+                <Search className="h-5 w-5" />
+                采购商快速注册
+              </Button>
+            </a>
           </div>
         </div>
       </div>
