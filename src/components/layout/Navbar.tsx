@@ -23,12 +23,12 @@ export function Navbar() {
           <img
             src="/logo-icon-navbar.png"
             alt="IHFTP"
-            className="h-12 w-auto object-contain"
+            className="h-14 w-auto object-contain"
           />
           <img
             src="/logo-text-navbar.png"
             alt="International Halal Food Trade Platform"
-            className="h-12 w-auto object-contain"
+            className="h-14 w-auto object-contain"
           />
         </a>
 
