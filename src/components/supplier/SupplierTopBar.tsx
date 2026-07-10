@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth-context";
 
 const supplierNavItems = [
   { label: "店铺管理", icon: Store, href: "#store" },
@@ -34,6 +35,16 @@ const supplierNavItems = [
 
 export function SupplierTopBar() {
   const [notifOpen, setNotifOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login?tab=supplier&mode=login";
+  };
+
+  const displayName = user?.name || "供应商用户";
+  const displayEmail = user?.email || "supplier@ihf.org";
+  const displayRole = user?.role || "金牌工厂";
 
   return (
     <div className="sticky top-0 z-[60] bg-brand-900 text-white text-sm">
@@ -44,7 +55,7 @@ export function SupplierTopBar() {
             <span className="bg-gold-500 text-brand-900 text-xs font-bold px-2 py-0.5 rounded">
               供应商
             </span>
-            <span className="hidden md:inline text-brand-200">IHFTP 供应商中心</span>
+            <span className="hidden md:inline text-brand-200">IHF 供应商中心</span>
           </div>
 
           {/* Supplier nav links — desktop */}
@@ -108,16 +119,16 @@ export function SupplierTopBar() {
               <div className="w-6 h-6 rounded-full bg-brand-500 flex items-center justify-center">
                 <User className="h-3.5 w-3.5 text-white" />
               </div>
-              <span className="hidden sm:inline text-brand-100 text-xs">山东惠发食品</span>
+              <span className="hidden sm:inline text-brand-100 text-xs">{displayName}</span>
               <ChevronDown className="h-3 w-3 text-brand-200" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <div className="px-3 py-2 border-b">
-                <div className="font-semibold text-sm text-foreground">山东惠发食品有限公司</div>
-                <div className="text-xs text-muted-foreground">huifa@ihftp.org</div>
+                <div className="font-semibold text-sm text-foreground">{displayName}</div>
+                <div className="text-xs text-muted-foreground">{displayEmail}</div>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span className="px-1.5 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded">供应商</span>
-                  <span className="px-1.5 py-0.5 bg-gold-50 text-gold-700 text-[10px] font-bold rounded">金牌工厂</span>
+                  <span className="px-1.5 py-0.5 bg-gold-50 text-gold-700 text-[10px] font-bold rounded">{displayRole}</span>
                 </div>
               </div>
               <DropdownMenuItem className="cursor-pointer">
@@ -132,7 +143,7 @@ export function SupplierTopBar() {
                 <LayoutDashboard className="h-4 w-4 mr-2" />
                 店铺装修
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600">
+              <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 退出登录
               </DropdownMenuItem>

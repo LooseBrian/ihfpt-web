@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { products } from "@/lib/data";
 
+// 惠发食品产品（首页精选展示）
+const huifaProducts = products.filter(
+  (p) => p.supplier === "惠发食品" || p.supplier === "Huifa Foods"
+);
+
 export function ProductsSection() {
+  const displayProducts = huifaProducts.length >= 4 ? huifaProducts : products;
+
   return (
     <section id="products" className="py-16 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -14,7 +21,7 @@ export function ProductsSection() {
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
+          {displayProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

@@ -1,6 +1,13 @@
+"use client";
+
 import { User, Factory } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export function SupplierHero() {
+  const { user } = useAuth();
+  const companyName = user?.name || "惠发食品有限公司";
+  const shortName = companyName.replace(/有限公司$/, "");
+
   return (
     <section className="relative bg-gradient-to-br from-brand-900 via-brand-700 to-brand-800 text-white py-12 md:py-16 overflow-hidden">
       <div className="container mx-auto px-4 relative z-10">
@@ -16,15 +23,15 @@ export function SupplierHero() {
                   供应商
                 </span>
                 <span className="px-2 py-0.5 bg-gold-500/20 text-gold-300 text-xs font-medium rounded">
-                  金牌工厂
+                  {user?.role || "金牌工厂"}
                 </span>
                 <span className="px-2 py-0.5 bg-white/10 text-brand-100 text-xs font-medium rounded">
                   已认证
                 </span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold">欢迎回来，山东惠发食品</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">欢迎回来，{shortName}</h1>
               <p className="text-brand-100 text-sm mt-1">
-                山东 · 惠发食品有限公司 · 清真牛羊肉制品 / 预制菜
+                {companyName} · 清真牛羊肉制品 / 预制菜
               </p>
             </div>
           </div>

@@ -5,7 +5,7 @@ export function AboutHero() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 rounded-full text-sm text-brand-100 mb-6">
             <span className="w-2 h-2 rounded-full bg-gold-400" />
-            国家级 · 全球化 · 垂直型 B2B 贸易平台
+            国家级 · 全球化 · 垂直型 B2B 产业平台
           </div>
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
             关于我们

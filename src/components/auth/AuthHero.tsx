@@ -11,7 +11,7 @@ export function AuthHero() {
             登录 / 注册
           </h1>
           <p className="text-brand-100 text-base md:text-lg max-w-2xl mx-auto">
-            无论您是寻求优质清真食品的海外采购商，还是希望拓展国际市场的中国供应商，IHFTP 都将是您最值得信赖的合作伙伴
+            无论您是寻求优质清真食品的海外采购商，还是希望拓展国际市场的中国供应商，IHF 都将是您最值得信赖的合作伙伴
           </p>
         </div>
       </div>

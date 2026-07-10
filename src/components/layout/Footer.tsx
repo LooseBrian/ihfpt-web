@@ -7,11 +7,21 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4 lg:col-span-2">
-            <img
-              src="/logo-footer.png"
-              alt="IHFTP 国际清真食品贸易平台"
-              className="h-24 w-auto object-contain rounded-xl shadow-lg"
-            />
+            <div className="bg-white rounded-lg px-2 py-1.5 shadow-md w-fit">
+              <div className="flex items-center gap-1.5">
+                <img
+                  src="/logo-icon.svg"
+                  alt="IHF"
+                  className="h-20 w-auto"
+                />
+                <span className="h-14 w-0.5 bg-gold-400/70 shrink-0" />
+                <img
+                  src="/logo-text.svg"
+                  alt="IHF 国际清真食品产业平台"
+                  className="h-20 w-auto"
+                />
+              </div>
+            </div>
             <p className="text-sm text-brand-200 leading-relaxed">
               国家级、全球化、垂直型清真食品B2B贸易与产业服务平台，链接中国优质清真食品产能与全球穆斯林消费市场。
             </p>
@@ -81,7 +91,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gold-500 shrink-0" />
-                <span>contact@ihftp.org</span>
+                <span>contact@ihf.org</span>
               </li>
             </ul>
             <div className="mt-4 pt-4 border-t border-brand-800">
@@ -94,7 +104,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-6 border-t border-brand-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-brand-300">
-          <p>© 2026 IHFTP 国际清真食品贸易平台. 保留所有权利.</p>
+          <p>© 2026 IHF 国际清真食品产业平台. 保留所有权利.</p>
           <div className="flex items-center gap-4">
             <a href="#" className="hover:text-gold-400 transition-colors">隐私政策</a>
             <a href="#" className="hover:text-gold-400 transition-colors">服务条款</a>

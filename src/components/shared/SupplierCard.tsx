@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Store, MapPin, TrendingUp } from "lucide-react";
@@ -8,6 +9,8 @@ interface SupplierCardProps {
 }
 
 export function SupplierCard({ supplier }: SupplierCardProps) {
+  const storeHref = supplier.storeId ? `/store/${supplier.storeId}` : `/store/${supplier.id}`;
+
   return (
     <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-all duration-300 p-5 flex flex-col">
       <div className="flex items-start gap-4 mb-4">
@@ -53,10 +56,12 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
           <span className="font-semibold">{supplier.exportVolume}</span>
           <span className="text-muted-foreground text-xs">年出口</span>
         </div>
-        <Button size="sm" variant="outline" className="gap-1">
-          <Store className="h-3.5 w-3.5" />
-          进入店铺
-        </Button>
+        <Link href={storeHref}>
+          <Button size="sm" variant="outline" className="gap-1">
+            <Store className="h-3.5 w-3.5" />
+            进入店铺
+          </Button>
+        </Link>
       </div>
     </div>
   );

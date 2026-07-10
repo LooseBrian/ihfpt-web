@@ -1,13 +1,20 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Store, MessageSquare, Calendar, MapPin, TrendingUp, Globe } from "lucide-react";
 import { suppliers } from "@/lib/data";
 
 export function StrategicSuppliers() {
-  const strategic = suppliers.filter((s) => s.tier === "S");
+  const strategic = suppliers
+    .filter((s) => s.tier === "S")
+    .sort((a, b) => {
+      if (a.storeId && !b.storeId) return -1;
+      if (!a.storeId && b.storeId) return 1;
+      return 0;
+    });
 
   return (
     <section className="py-10 bg-gradient-to-b from-brand-900 to-brand-800 text-white">
@@ -125,13 +132,15 @@ export function StrategicSuppliers() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 gap-1"
-                >
-                  <Store className="h-3.5 w-3.5" />
-                  进入品牌店铺
-                </Button>
+                <Link href={`/store/${supplier.storeId || supplier.id}`}>
+                  <Button
+                    size="sm"
+                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 gap-1"
+                  >
+                    <Store className="h-3.5 w-3.5" />
+                    进入品牌店铺
+                  </Button>
+                </Link>
                 <Button
                   size="sm"
                   className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-semibold gap-1"

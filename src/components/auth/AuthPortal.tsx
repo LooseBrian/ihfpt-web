@@ -18,14 +18,17 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth-context";
 
 type Portal = "supplier" | "buyer";
 type Mode = "login" | "signup";
 
 export function AuthPortal() {
+  const { login } = useAuth();
   const [portal, setPortal] = useState<Portal>("supplier");
   const [mode, setMode] = useState<Mode>("login");
   const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState<Record<string, string>>({});
 
   // Read query params on mount
   useEffect(() => {
@@ -111,6 +114,57 @@ export function AuthPortal() {
   const Icon = config.icon;
   const isSupplier = portal === "supplier";
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mode === "login") {
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get("redirect");
+      const accountField = config.loginFields[0];
+      const account = formData[accountField.label] || "";
+
+      // Determine display name and email based on account input
+      let displayName: string;
+      let email: string;
+
+      if (isSupplier) {
+        // Supplier test account: huifa → 惠发食品有限公司
+        const lowerAccount = account.toLowerCase().trim();
+        if (lowerAccount === "huifa" || lowerAccount.includes("惠发")) {
+          displayName = "惠发食品有限公司";
+          email = account.includes("@") ? account : "huifa@ihf.org";
+        } else if (account.includes("@")) {
+          // Use email prefix as company name + 有限公司
+          displayName = `${account.split("@")[0]}有限公司`;
+          email = account;
+        } else {
+          displayName = account ? `${account}有限公司` : "供应商用户";
+          email = "supplier@ihf.org";
+        }
+      } else {
+        // Buyer
+        if (account.includes("@")) {
+          displayName = account.split("@")[0];
+          email = account;
+        } else {
+          displayName = account || "采购商用户";
+          email = "buyer@ihf.org";
+        }
+      }
+
+      login({
+        type: portal,
+        name: displayName,
+        email,
+        role: isSupplier ? "金牌工厂" : "已认证",
+      });
+      window.location.href = redirectTo || (isSupplier ? "/supplier" : "/buyer");
+    }
+  };
+
+  const updateField = (label: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [label]: value }));
+  };
+
   return (
     <section className="py-16 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -190,7 +244,7 @@ export function AuthPortal() {
 
                 {/* Form */}
                 <form
-                  onSubmit={(e) => e.preventDefault()}
+                  onSubmit={handleSubmit}
                   className="p-6 space-y-4"
                 >
                   {/* Login or Signup fields */}
@@ -208,6 +262,8 @@ export function AuthPortal() {
                               placeholder={field.placeholder}
                               required={field.required}
                               className="h-10 pr-10"
+                              value={formData[field.label] || ""}
+                              onChange={(e) => updateField(field.label, e.target.value)}
                             />
                             {field.label.includes("密码") && (
                               <button

@@ -8,8 +8,8 @@ const roles = [
     subtitle: "B 端 · 采购方",
     channels: [
       { label: "寻源热线", value: "+86 10-XXXX-XXXX" },
-      { label: "采购邮箱", value: "sourcing@ihftp.org" },
-      { label: "微信客服", value: "IHFTP-Buyer" },
+      { label: "采购邮箱", value: "sourcing@ihf.org" },
+      { label: "微信客服", value: "IHF-Buyer" },
     ],
     desc: "经销商、商超、餐饮连锁、贸易公司",
   },
@@ -19,8 +19,8 @@ const roles = [
     subtitle: "B 端 · 供应方",
     channels: [
       { label: "入驻咨询", value: "+86 10-XXXX-XXXX" },
-      { label: "入驻邮箱", value: "supplier@ihftp.org" },
-      { label: "微信客服", value: "IHFTP-Supplier" },
+      { label: "入驻邮箱", value: "supplier@ihf.org" },
+      { label: "微信客服", value: "IHF-Supplier" },
     ],
     desc: "生产工厂、OEM/ODM 企业、贸易商",
   },
@@ -29,8 +29,8 @@ const roles = [
     title: "平台运营管理",
     subtitle: "内部 · 管理方",
     channels: [
-      { label: "运营邮箱", value: "operations@ihftp.org" },
-      { label: "技术支持", value: "tech@ihftp.org" },
+      { label: "运营邮箱", value: "operations@ihf.org" },
+      { label: "技术支持", value: "tech@ihf.org" },
       { label: "内线电话", value: "分机 8001" },
     ],
     desc: "平台运营、内容管理、技术支持",
@@ -40,8 +40,8 @@ const roles = [
     title: "行业访客 / 政府 / 协会",
     subtitle: "外部 · 合作方",
     channels: [
-      { label: "合作邮箱", value: "partnership@ihftp.org" },
-      { label: "媒体联络", value: "media@ihftp.org" },
+      { label: "合作邮箱", value: "partnership@ihf.org" },
+      { label: "媒体联络", value: "media@ihf.org" },
       { label: "商务微信", value: "IHFP-Partner" },
     ],
     desc: "政府机构、行业协会、媒体、合作方",

@@ -1,7 +1,16 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Search, UserPlus, ArrowRight } from "lucide-react";
 
 export function HeroSection() {
+  const handleSearchProducts = () => {
+    const productsSection = document.getElementById("products");
+    if (productsSection) {
+      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
     <section className="relative bg-brand-900 text-white overflow-hidden">
       {/* Background video */}
@@ -28,10 +37,10 @@ export function HeroSection() {
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            国际清真食品贸易平台
+            国际清真食品产业平台
           </h1>
           <p className="text-lg md:text-2xl text-brand-200 mb-3">
-            International Halal Food Trade Platform
+            International Halal Food Industrial Platform
           </p>
           <p className="text-base md:text-lg text-brand-300 mb-10 max-w-xl mx-auto">
             国家级、全球化、垂直型清真食品 B2B 贸易与产业服务平台
@@ -42,20 +51,23 @@ export function HeroSection() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               size="lg"
-              className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-bold px-8 gap-2"
+              className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-bold px-8 gap-2 cursor-pointer"
+              onClick={handleSearchProducts}
             >
               <Search className="h-5 w-5" />
               寻找产品
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-brand-400 bg-transparent text-white hover:bg-brand-800 hover:text-white px-8 gap-2"
-            >
-              <UserPlus className="h-5 w-5" />
-              申请入驻
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <a href="/login?tab=supplier&mode=signup" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-brand-400 bg-transparent text-white hover:bg-brand-800 hover:text-white px-8 gap-2 w-full cursor-pointer"
+              >
+                <UserPlus className="h-5 w-5" />
+                申请入驻
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </a>
           </div>
 
           <div className="mt-16 flex flex-wrap items-center justify-center gap-6 text-sm text-brand-300">

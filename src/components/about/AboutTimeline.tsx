@@ -49,7 +49,7 @@ export function AboutTimeline() {
       <div className="container mx-auto px-4">
         <SectionHeader
           title="发展里程碑"
-          subtitle="三阶段建设路线，从 MVP 上线到生态闭环，稳步打造行业标杆级清真食品贸易平台"
+          subtitle="三阶段建设路线，从 MVP 上线到生态闭环，稳步打造行业标杆级清真食品产业平台"
         />
 
         <div className="max-w-4xl mx-auto relative">

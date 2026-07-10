@@ -32,7 +32,7 @@ export function AboutIntro() {
           <div className="bg-muted/30 rounded-2xl p-8 md:p-10 border border-border/40">
             <p className="text-foreground leading-relaxed text-base md:text-lg">
               <strong className="text-brand-900">
-                国际清真食品贸易平台（IHFTP）
+                国际清真食品产业平台（IHF）
               </strong>
               由中国食品药品企业质量安全促进会主办，中国-东盟特色产业链出海平台专业委员会运营，是集产品供需匹配、合规认证代办、跨境供应链服务、产业资源对接于一体的国家级 B2B 贸易与产业服务平台。平台核心覆盖东盟、中东、北非、中亚四大穆斯林主流市场，辐射全球清真食品贸易网络。
             </p>

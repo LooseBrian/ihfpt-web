@@ -12,10 +12,11 @@ import { SupplierOrders } from "@/components/supplier/SupplierOrders";
 import { SupplierMessages } from "@/components/supplier/SupplierMessages";
 import { SupplierStats } from "@/components/supplier/SupplierStats";
 import { CTASection } from "@/components/sections/CTASection";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 
 export default function SupplierPage() {
   return (
-    <>
+    <AuthGuard type="supplier">
       <SupplierTopBar />
       <Navbar />
       <main className="flex-1 bg-muted/20">
@@ -32,6 +33,6 @@ export default function SupplierPage() {
       </main>
       <Footer />
       <BackToTop />
-    </>
+    </AuthGuard>
   );
 }

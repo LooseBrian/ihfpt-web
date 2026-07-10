@@ -17,12 +17,12 @@ export function CTASection() {
       <div className="container mx-auto px-4 relative">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-            加入国际清真食品贸易平台
+            加入国际清真食品产业平台
           </h2>
           <p className="text-brand-100 mb-8">
             无论您是寻求优质清真食品的海外采购商，还是希望拓展国际市场的中国供应商，
             <br className="hidden md:block" />
-            IHFTP 都将是您最值得信赖的合作伙伴
+            IHF 都将是您最值得信赖的合作伙伴
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

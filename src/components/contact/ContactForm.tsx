@@ -155,7 +155,7 @@ export function ContactForm() {
             {/* Side info */}
             <div className="space-y-6">
               <div className="bg-brand-900 rounded-2xl p-6 text-white">
-                <h3 className="font-bold text-lg mb-4">为什么选择 IHFTP？</h3>
+                <h3 className="font-bold text-lg mb-4">为什么选择 IHF？</h3>
                 <ul className="space-y-3 text-sm text-brand-100">
                   <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-gold-400 mt-1.5 shrink-0" />

@@ -11,9 +11,9 @@ export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <header className="sticky top-10 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
+    <header className="sticky top-10 z-50 bg-white border-b shadow-sm">
       <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-        {/* Logo — hidden on mobile when search is open */}
+        {/* Logo — Icon + CSS Divider + Text (pure vector, transparent bg) */}
         <a
           href="/"
           className={`flex items-center gap-2 shrink-0 ${
@@ -21,14 +21,15 @@ export function Navbar() {
           }`}
         >
           <img
-            src="/logo-icon-navbar.png"
-            alt="IHFTP"
-            className="h-14 w-auto object-contain"
+            src="/logo-icon.svg"
+            alt="IHF"
+            className="h-[72px] w-auto"
           />
+          <span className="h-14 w-1 bg-gold-500 rounded-full shrink-0" />
           <img
-            src="/logo-text-navbar.png"
-            alt="International Halal Food Trade Platform"
-            className="h-14 w-auto object-contain"
+            src="/logo-text.svg"
+            alt="International Halal Food Industrial Platform"
+            className="h-16 w-auto"
           />
         </a>
 

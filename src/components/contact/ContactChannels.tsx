@@ -12,14 +12,14 @@ const channels = [
   {
     icon: Mail,
     title: "电子邮箱",
-    primary: "contact@ihftp.org",
+    primary: "contact@ihf.org",
     secondary: "7×24 小时接收",
     desc: "商务合作、媒体联络、一般咨询",
   },
   {
     icon: MessageCircle,
     title: "商务微信",
-    primary: "IHFTP-Service",
+    primary: "IHF-Service",
     secondary: "扫码添加客服微信",
     desc: "快速沟通、在线答疑、预约对接",
   },

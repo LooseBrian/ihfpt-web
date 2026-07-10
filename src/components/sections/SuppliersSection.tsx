@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { suppliers } from "@/lib/data";
 
+// 惠发食品供应商（首页推荐展示）
+const huifaSupplier = suppliers.find((s) => s.storeId === "huifa") || suppliers[0];
+
 export function SuppliersSection() {
   return (
     <section id="suppliers" className="py-16 bg-white">
@@ -14,9 +17,8 @@ export function SuppliersSection() {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {suppliers.map((supplier) => (
-            <SupplierCard key={supplier.id} supplier={supplier} />
-          ))}
+          <SupplierCard key={huifaSupplier.id} supplier={huifaSupplier} />
+          <SupplierCard key={`${huifaSupplier.id}-2`} supplier={huifaSupplier} />
         </div>
 
         <div className="mt-10 text-center">

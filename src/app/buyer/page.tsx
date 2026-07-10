@@ -11,10 +11,11 @@ import { BuyerOrders } from "@/components/buyer/BuyerOrders";
 import { BuyerMessages } from "@/components/buyer/BuyerMessages";
 import { BuyerStats } from "@/components/buyer/BuyerStats";
 import { CTASection } from "@/components/sections/CTASection";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 
 export default function BuyerPage() {
   return (
-    <>
+    <AuthGuard type="buyer">
       <BuyerTopBar />
       <Navbar />
       <main className="flex-1 bg-muted/20">
@@ -30,6 +31,6 @@ export default function BuyerPage() {
       </main>
       <Footer />
       <BackToTop />
-    </>
+    </AuthGuard>
   );
 }

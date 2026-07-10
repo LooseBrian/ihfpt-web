@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth-context";
 
 const buyerNavItems = [
   { label: "询盘管理", icon: MessageSquare, href: "#inquiries" },
@@ -34,6 +35,16 @@ const buyerNavItems = [
 
 export function BuyerTopBar() {
   const [notifOpen, setNotifOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login?tab=buyer&mode=login";
+  };
+
+  const displayName = user?.name || "采购商用户";
+  const displayEmail = user?.email || "buyer@ihf.org";
+  const displayRole = user?.role || "已认证";
 
   return (
     <div className="sticky top-0 z-[60] bg-trust-900 text-white text-sm">
@@ -44,7 +55,7 @@ export function BuyerTopBar() {
             <span className="bg-gold-500 text-trust-900 text-xs font-bold px-2 py-0.5 rounded">
               采购商
             </span>
-            <span className="hidden md:inline text-trust-200">IHFTP 采购商中心</span>
+            <span className="hidden md:inline text-trust-200">IHF 采购商中心</span>
           </div>
 
           {/* Buyer nav links — desktop */}
@@ -108,16 +119,16 @@ export function BuyerTopBar() {
               <div className="w-6 h-6 rounded-full bg-trust-500 flex items-center justify-center">
                 <User className="h-3.5 w-3.5 text-white" />
               </div>
-              <span className="hidden sm:inline text-trust-100 text-xs">采购商用户</span>
+              <span className="hidden sm:inline text-trust-100 text-xs">{displayName}</span>
               <ChevronDown className="h-3 w-3 text-trust-200" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <div className="px-3 py-2 border-b">
-                <div className="font-semibold text-sm text-foreground">采购商用户</div>
-                <div className="text-xs text-muted-foreground">premium.buyer@ihftp.org</div>
+                <div className="font-semibold text-sm text-foreground">{displayName}</div>
+                <div className="text-xs text-muted-foreground">{displayEmail}</div>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span className="px-1.5 py-0.5 bg-trust-50 text-trust-700 text-[10px] font-bold rounded">采购商</span>
-                  <span className="px-1.5 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded">已认证</span>
+                  <span className="px-1.5 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded">{displayRole}</span>
                 </div>
               </div>
               <DropdownMenuItem className="cursor-pointer">
@@ -132,7 +143,7 @@ export function BuyerTopBar() {
                 <Package className="h-4 w-4 mr-2" />
                 资质档案库
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600">
+              <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 退出登录
               </DropdownMenuItem>
