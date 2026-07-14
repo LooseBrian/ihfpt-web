@@ -42,6 +42,9 @@ export function HeroSection() {
           <p className="text-lg md:text-2xl text-brand-200 mb-3">
             International Halal Food Industrial Platform
           </p>
+          <p className="text-xl md:text-3xl font-semibold text-gold-400 mb-4">
+            中国特色产业链出海平台
+          </p>
           <p className="text-base md:text-lg text-brand-300 mb-10 max-w-xl mx-auto">
             国家级、全球化、垂直型清真食品 B2B 贸易与产业服务平台
             <br className="hidden md:block" />
