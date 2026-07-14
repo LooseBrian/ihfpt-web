@@ -6,9 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { navLinks } from "@/lib/data";
+import { useAuth } from "@/lib/auth-context";
 
 export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const { user, isLoggedIn } = useAuth();
+
+  // Switch hover colors based on logged-in role
+  const isBuyer = isLoggedIn && user?.type === "buyer";
+  const linkHover = isBuyer
+    ? "hover:text-trust-600 hover:bg-trust-50"
+    : "hover:text-brand-600 hover:bg-brand-50";
 
   return (
     <header className="sticky top-10 z-50 bg-white border-b shadow-sm">
@@ -39,7 +47,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="px-3 py-2 text-sm text-foreground hover:text-brand-600 hover:bg-brand-50 rounded-md transition-colors"
+              className={`px-3 py-2 text-sm text-foreground ${linkHover} rounded-md transition-colors`}
             >
               {link.label}
             </a>
@@ -99,7 +107,7 @@ export function Navbar() {
                     <a
                       key={link.href}
                       href={link.href}
-                      className="px-3 py-2.5 text-sm text-foreground hover:text-brand-600 hover:bg-brand-50 rounded-md transition-colors"
+                      className={`px-3 py-2.5 text-sm text-foreground ${linkHover} rounded-md transition-colors`}
                     >
                       {link.label}
                     </a>
@@ -113,7 +121,7 @@ export function Navbar() {
                     </Button>
                   </a>
                   <a href="/login?tab=supplier&mode=signup" className="w-full">
-                    <Button className="w-full bg-brand-600 hover:bg-brand-700">
+                    <Button className={`w-full ${isBuyer ? "bg-trust-600 hover:bg-trust-700" : "bg-brand-600 hover:bg-brand-700"}`}>
                       供应商入驻
                     </Button>
                   </a>

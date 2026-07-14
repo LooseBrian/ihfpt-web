@@ -1,7 +1,7 @@
+import { TopBar } from "@/components/layout/TopBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { BackToTop } from "@/components/shared/BackToTop";
-import { SupplierTopBar } from "@/components/supplier/SupplierTopBar";
 import { SupplierHero } from "@/components/supplier/SupplierHero";
 import { SupplierDashboard } from "@/components/supplier/SupplierDashboard";
 import { SupplierProducts } from "@/components/supplier/SupplierProducts";
@@ -17,7 +17,7 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 export default function SupplierPage() {
   return (
     <AuthGuard type="supplier">
-      <SupplierTopBar />
+      <TopBar />
       <Navbar />
       <main className="flex-1 bg-muted/20">
         <SupplierHero />

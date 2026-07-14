@@ -20,6 +20,13 @@ export interface Subcategory {
   count: number;
 }
 
+export interface ProductVideo {
+  url: string;
+  thumbnail?: string;
+  duration?: string;
+  title?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -30,6 +37,8 @@ export interface Product {
   supplier: string;
   certType: string;
   image: string;
+  images?: string[];
+  videos?: ProductVideo[];
   category?: string;
   subcategory?: string;
   exportRegions?: string[];
@@ -211,7 +220,7 @@ export const products: Product[] = [
   { id: "p24", name: "清真正宗拉面", nameEn: "Halal Authentic Ramen", spec: "120g/袋", moq: "2000袋", priceRange: "$1.0 - $1.3", supplier: "Orient Delight", certType: "HALAL", image: "/media/product-instant-soup.jpg", category: "清真预制菜", subcategory: "即食便当", exportRegions: ["东盟", "中东", "北非"], moqRange: "1-5吨", supplierQuals: ["出口食品生产备案", "AEO认证"], services: ["支持样品单", "支持拼柜", "可代办清关"], origin: "甘肃" },
 
   // 惠发食品产品线（与店铺页面一致，8款）
-  { id: "h1", name: "清真冷冻羊腿肉（分割）", nameEn: "Halal Frozen Lamb Leg (Cut)", spec: "10kg/箱", moq: "100箱", priceRange: "¥85/kg", supplier: "惠发食品", certType: "JAKIM", image: "/media/product-lamb-skewers.jpg", category: "牛羊肉制品", subcategory: "羊排", exportRegions: ["东盟", "中东", "中亚"], moqRange: "5-10吨", supplierQuals: ["出口食品生产备案", "源头工厂", "AEO认证", "HACCP"], services: ["支持样品单", "支持拼柜", "可代办清关"], origin: "山东", isHot: true },
+  { id: "h1", name: "清真冷冻羊腿肉（分割）", nameEn: "Halal Frozen Lamb Leg (Cut)", spec: "10kg/箱", moq: "100箱", priceRange: "¥85/kg", supplier: "惠发食品", certType: "JAKIM", image: "/media/product-lamb-skewers.jpg", images: ["/media/product-lamb-skewers.jpg", "/media/product-curry-sauce.jpg", "/media/product-beef-meatballs.jpg", "/media/product-frozen-dumplings.jpg", "/media/product-instant-soup.jpg", "/media/product-curry-beef.jpg"], videos: [{ url: "/media/product-demo.mp4", thumbnail: "/media/product-lamb-skewers.jpg", duration: "0:45", title: "产品展示视频" }, { url: "/media/product-demo2.mp4", thumbnail: "/media/product-curry-sauce.jpg", duration: "1:20", title: "生产流程视频" }], category: "牛羊肉制品", subcategory: "羊排", exportRegions: ["东盟", "中东", "中亚"], moqRange: "5-10吨", supplierQuals: ["出口食品生产备案", "源头工厂", "AEO认证", "HACCP"], services: ["支持样品单", "支持拼柜", "可代办清关"], origin: "山东", isHot: true },
   { id: "h2", name: "清真预制菜 — 咖喱牛肉", nameEn: "Halal Curry Beef Ready Meal", spec: "500g/盒", moq: "800盒", priceRange: "¥45/盒", supplier: "惠发食品", certType: "JAKIM", image: "/media/product-curry-sauce.jpg", category: "清真预制菜", subcategory: "即食便当", exportRegions: ["东盟", "中东"], moqRange: "1-5吨", supplierQuals: ["出口食品生产备案", "源头工厂", "AEO认证"], services: ["支持样品单", "支持拼柜", "支持OEM"], origin: "山东", isBestSeller: true },
   { id: "h3", name: "清真复合调味料 — 孜然粉", nameEn: "Halal Cumin Powder Seasoning", spec: "1kg/袋", moq: "500袋", priceRange: "¥15/kg", supplier: "惠发食品", certType: "GSO", image: "/media/product-curry-sauce.jpg", category: "调味品", subcategory: "复合调味料", exportRegions: ["东盟", "中东", "中亚"], moqRange: "1-5吨", supplierQuals: ["出口食品生产备案", "源头工厂", "AEO认证"], services: ["支持样品单", "支持拼柜", "支持OEM"], origin: "山东" },
   { id: "h4", name: "清真速冻调理品 — 烤鸡翅", nameEn: "Halal Roasted Chicken Wings", spec: "2kg/袋", moq: "300袋", priceRange: "¥35/kg", supplier: "惠发食品", certType: "HALAL", image: "/media/product-lamb-skewers.jpg", category: "速冻调理品", subcategory: "调理肉制品", exportRegions: ["东盟", "中东", "中亚"], moqRange: "1-5吨", supplierQuals: ["出口食品生产备案", "源头工厂", "AEO认证"], services: ["支持样品单", "支持拼柜", "可代办清关"], origin: "山东", isHot: true },

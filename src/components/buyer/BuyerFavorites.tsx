@@ -43,16 +43,17 @@ export function BuyerFavorites() {
         <SectionHeader
           title="我的收藏夹"
           subtitle="收藏的产品与供应商，支持批量询价与产品对比"
+          theme="trust"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {favorites.map((product) => (
             <div
               key={product.name}
-              className="bg-muted/30 rounded-xl border border-border/40 overflow-hidden hover:shadow-md transition-shadow group"
+              className="bg-white rounded-xl border border-border/40 overflow-hidden hover:shadow-md transition-shadow group"
             >
               {/* Image */}
-              <div className="relative h-36 bg-gradient-to-br from-brand-100 to-brand-200 overflow-hidden">
+              <div className="relative h-36 bg-gradient-to-br from-trust-100 to-trust-200 overflow-hidden">
                 <img
                   src={product.image}
                   alt={product.name}
@@ -65,7 +66,7 @@ export function BuyerFavorites() {
 
               {/* Content */}
               <div className="p-4">
-                <h3 className="font-semibold text-brand-900 text-sm mb-1 line-clamp-1">{product.name}</h3>
+                <h3 className="font-semibold text-trust-900 text-sm mb-1 line-clamp-1">{product.name}</h3>
                 <p className="text-xs text-muted-foreground mb-2">{product.supplier}</p>
 
                 {/* Certs */}
@@ -73,7 +74,7 @@ export function BuyerFavorites() {
                   {product.certs.map((cert) => (
                     <span
                       key={cert}
-                      className="px-1.5 py-0.5 text-[10px] bg-brand-50 text-brand-600 rounded font-medium"
+                      className="px-1.5 py-0.5 text-[10px] bg-trust-50 text-trust-600 rounded font-medium"
                     >
                       {cert}
                     </span>
@@ -82,13 +83,13 @@ export function BuyerFavorites() {
 
                 {/* Price + MOQ */}
                 <div className="flex items-center justify-between text-xs mb-3">
-                  <span className="text-brand-700 font-semibold">{product.price}</span>
+                  <span className="text-trust-700 font-semibold">{product.price}</span>
                   <span className="text-muted-foreground">MOQ: {product.moq}</span>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <button className="flex-1 py-1.5 text-xs bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors flex items-center justify-center gap-1">
+                  <button className="flex-1 py-1.5 text-xs bg-trust-600 text-white rounded-lg font-medium hover:bg-trust-700 transition-colors flex items-center justify-center gap-1">
                     <ShoppingCart className="h-3 w-3" />
                     询价
                   </button>
@@ -103,11 +104,11 @@ export function BuyerFavorites() {
 
         {/* Batch actions */}
         <div className="max-w-5xl mx-auto mt-6">
-          <div className="flex items-center justify-between bg-brand-50 rounded-xl p-4">
-            <span className="text-sm text-brand-700">
+          <div className="flex items-center justify-between bg-trust-50 rounded-xl p-4">
+            <span className="text-sm text-trust-700">
               已收藏 {favorites.length} 个产品，支持批量询价与产品对比
             </span>
-            <button className="px-4 py-2 text-sm bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors">
+            <button className="px-4 py-2 text-sm bg-trust-600 text-white rounded-lg font-medium hover:bg-trust-700 transition-colors">
               批量询价
             </button>
           </div>

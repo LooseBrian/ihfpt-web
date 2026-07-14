@@ -7,7 +7,7 @@ const quickActions = [
     title: "浏览产品大厅",
     desc: "探索 6 大品类清真食品，筛选认证供应商",
     href: "/products",
-    color: "brand",
+    color: "trust",
   },
   {
     icon: FileText,
@@ -28,7 +28,7 @@ const quickActions = [
     title: "我的收藏夹",
     desc: "管理收藏的产品与供应商",
     href: "#favorites",
-    color: "brand",
+    color: "trust",
   },
 ];
 
@@ -46,6 +46,7 @@ export function BuyerDashboard() {
         <SectionHeader
           title="采购商工作台"
           subtitle="一站式管理询盘、收藏、需求发布与消息通知"
+          theme="trust"
         />
 
         {/* Quick Actions */}
@@ -56,12 +57,12 @@ export function BuyerDashboard() {
               <a
                 key={action.title}
                 href={action.href}
-                className="group bg-muted/30 rounded-xl border border-border/40 p-5 hover:shadow-md hover:border-brand-300 transition-all"
+                className="group bg-white rounded-xl border border-border/40 p-5 hover:shadow-md hover:border-trust-300 transition-all"
               >
-                <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
-                  <Icon className="h-6 w-6 text-brand-600" />
+                <div className="w-12 h-12 rounded-xl bg-trust-50 flex items-center justify-center mb-3 group-hover:bg-trust-100 transition-colors">
+                  <Icon className="h-6 w-6 text-trust-600" />
                 </div>
-                <h3 className="font-bold text-brand-900 text-sm mb-1">{action.title}</h3>
+                <h3 className="font-bold text-trust-900 text-sm mb-1">{action.title}</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">{action.desc}</p>
               </a>
             );
@@ -70,23 +71,23 @@ export function BuyerDashboard() {
 
         {/* Discovery Flow */}
         <div className="max-w-5xl mx-auto">
-          <div className="bg-muted/30 rounded-2xl p-6 border border-border/40">
+          <div className="bg-white rounded-2xl p-6 border border-border/40">
             <div className="flex items-center gap-2 mb-5">
-              <TrendingUp className="h-5 w-5 text-brand-600" />
-              <h3 className="font-bold text-brand-900">采购寻源流程</h3>
+              <TrendingUp className="h-5 w-5 text-trust-600" />
+              <h3 className="font-bold text-trust-900">采购寻源流程</h3>
               <span className="text-sm text-muted-foreground">— 品类导航 → 精选产品 → 供应商详情 → 在线询价</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {discoverySteps.map((item, idx) => (
                 <div key={item.step} className="relative">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xl font-bold text-brand-300">{item.step}</span>
-                    <Package className="h-4 w-4 text-brand-500" />
+                    <span className="text-xl font-bold text-trust-300">{item.step}</span>
+                    <Package className="h-4 w-4 text-trust-500" />
                   </div>
                   <h4 className="font-semibold text-foreground text-sm mb-1">{item.title}</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
                   {idx < discoverySteps.length - 1 && (
-                    <div className="hidden md:block absolute top-3 -right-2 text-brand-300">→</div>
+                    <div className="hidden md:block absolute top-3 -right-2 text-trust-300">→</div>
                   )}
                 </div>
               ))}

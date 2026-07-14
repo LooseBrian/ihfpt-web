@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { InquiryDialog } from "@/components/inquiry/InquiryDialog";
 
 interface StorefrontData {
   companyName: string;
@@ -128,8 +129,19 @@ export function SupplierStorefront({
   isPreview?: boolean;
 }) {
   const [activeSection, setActiveSection] = useState("products");
+  const [inquiryOpen, setInquiryOpen] = useState(false);
   // Merge isPreview from prop or data
   const previewMode = isPreview || data.isPreview || false;
+
+  const inquiryProduct = {
+    id: "store-inquiry",
+    name: "惠发食品店铺询盘",
+    image: "/media/product-lamb-skewers.jpg",
+    spec: "多品类",
+    priceRange: "请咨询",
+    supplier: "惠发食品",
+    certType: "JAKIM",
+  };
 
   const navItems = [
     { id: "products", label: "全部产品", count: data.products.length },
@@ -207,7 +219,7 @@ export function SupplierStorefront({
             {/* CTA */}
             {!previewMode && (
               <div className="hidden md:flex flex-col gap-2 shrink-0">
-                <Button className="bg-gold-500 hover:bg-gold-600 text-white">
+                <Button className="bg-gold-500 hover:bg-gold-600 text-white" onClick={() => setInquiryOpen(true)}>
                   <MessageSquare className="h-4 w-4 mr-1.5" />
                   发送询盘
                 </Button>
@@ -249,7 +261,7 @@ export function SupplierStorefront({
 
             {!previewMode && (
               <div className="flex items-center gap-2">
-                <Button size="sm" className="bg-brand-600 hover:bg-brand-700 md:hidden">
+                <Button size="sm" className="bg-brand-600 hover:bg-brand-700 md:hidden" onClick={() => setInquiryOpen(true)}>
                   <MessageSquare className="h-3.5 w-3.5 mr-1" />
                   询盘
                 </Button>
@@ -392,7 +404,7 @@ export function SupplierStorefront({
               </div>
 
               {!previewMode && (
-                <Button className="w-full mt-4 bg-brand-600 hover:bg-brand-700" size="sm">
+                <Button className="w-full mt-4 bg-brand-600 hover:bg-brand-700" size="sm" onClick={() => setInquiryOpen(true)}>
                   <MessageSquare className="h-4 w-4 mr-1.5" />
                   发送询盘
                 </Button>
@@ -448,7 +460,7 @@ export function SupplierStorefront({
                         <span className="text-sm font-bold text-brand-700">{product.price}</span>
                       </div>
                       {!previewMode && (
-                        <button className="w-full mt-2.5 py-1.5 text-xs bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-lg font-medium transition-colors">
+                        <button className="w-full mt-2.5 py-1.5 text-xs bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-lg font-medium transition-colors" onClick={() => setInquiryOpen(true)}>
                           发送询盘
                         </button>
                       )}
@@ -589,7 +601,7 @@ export function SupplierStorefront({
 
               {!previewMode && (
                 <div className="flex gap-3 mt-5">
-                  <Button className="bg-gold-500 hover:bg-gold-600 text-white flex-1">
+                  <Button className="bg-gold-500 hover:bg-gold-600 text-white flex-1" onClick={() => setInquiryOpen(true)}>
                     <MessageSquare className="h-4 w-4 mr-1.5" />
                     立即发送询盘
                   </Button>
@@ -602,6 +614,12 @@ export function SupplierStorefront({
           </div>
         </div>
       </div>
+
+      <InquiryDialog
+        open={inquiryOpen}
+        onClose={() => setInquiryOpen(false)}
+        product={inquiryProduct}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ export function BuyerStats() {
         <SectionHeader
           title="采购商数据"
           subtitle="以数据驱动采购决策，助力全球清真食品贸易高效对接"
+          theme="trust"
           className="[&_h2]:text-white [&_p]:text-trust-200 [&_div:last-child]:bg-gold-400"
         />
 

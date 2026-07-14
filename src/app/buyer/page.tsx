@@ -1,7 +1,7 @@
+import { TopBar } from "@/components/layout/TopBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { BackToTop } from "@/components/shared/BackToTop";
-import { BuyerTopBar } from "@/components/buyer/BuyerTopBar";
 import { BuyerHero } from "@/components/buyer/BuyerHero";
 import { BuyerDashboard } from "@/components/buyer/BuyerDashboard";
 import { BuyerInquiries } from "@/components/buyer/BuyerInquiries";
@@ -16,9 +16,9 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 export default function BuyerPage() {
   return (
     <AuthGuard type="buyer">
-      <BuyerTopBar />
+      <TopBar />
       <Navbar />
-      <main className="flex-1 bg-muted/20">
+      <main className="flex-1" style={{ backgroundColor: "#F2FAF8" }}>
         <BuyerHero />
         <BuyerDashboard />
         <BuyerInquiries />

@@ -10,11 +10,12 @@ const orderPhases = [
 
 export function BuyerOrders() {
   return (
-    <section id="orders" className="py-16 bg-muted/30">
+    <section id="orders" className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <SectionHeader
           title="订单管理 & 物流跟踪"
           subtitle="从询盘到交付的全链路管理 — 分阶段上线，构建完整的贸易交易闭环"
+          theme="trust"
         />
 
         <div className="max-w-4xl mx-auto">
@@ -24,14 +25,14 @@ export function BuyerOrders() {
                 key={item.title}
                 className={`flex items-start gap-4 rounded-xl border p-5 ${
                   item.status === "available"
-                    ? "bg-white border-brand-200 shadow-sm"
-                    : "bg-muted/20 border-border/40"
+                    ? "bg-white border-trust-200 shadow-sm"
+                    : "bg-[#F2FAF8] border-border/40"
                 }`}
               >
                 {/* Phase badge */}
                 <div className="flex flex-col items-center shrink-0">
                   <span className={`px-2 py-0.5 text-xs font-bold rounded ${
-                    item.phase === "一期" ? "bg-brand-100 text-brand-700" :
+                    item.phase === "一期" ? "bg-trust-100 text-trust-700" :
                     item.phase === "二期" ? "bg-gold-100 text-gold-700" :
                     "bg-muted text-muted-foreground"
                   }`}>
@@ -45,13 +46,13 @@ export function BuyerOrders() {
                     {item.title.includes("物流") ? (
                       <Truck className="h-4 w-4 text-trust-600" />
                     ) : item.title.includes("询盘") ? (
-                      <ClipboardList className="h-4 w-4 text-brand-600" />
+                      <ClipboardList className="h-4 w-4 text-trust-600" />
                     ) : (
                       <Package className="h-4 w-4 text-gold-600" />
                     )}
-                    <h3 className="font-bold text-brand-900 text-sm">{item.title}</h3>
+                    <h3 className="font-bold text-trust-900 text-sm">{item.title}</h3>
                     {item.status === "available" ? (
-                      <span className="px-1.5 py-0.5 text-[10px] bg-brand-50 text-brand-600 rounded font-medium">已上线</span>
+                      <span className="px-1.5 py-0.5 text-[10px] bg-trust-50 text-trust-600 rounded font-medium">已上线</span>
                     ) : item.status === "coming" ? (
                       <span className="px-1.5 py-0.5 text-[10px] bg-gold-50 text-gold-600 rounded font-medium">即将上线</span>
                     ) : (
@@ -64,7 +65,7 @@ export function BuyerOrders() {
                 {/* Status icon */}
                 <div className="shrink-0 mt-0.5">
                   {item.status === "available" ? (
-                    <Clock className="h-4 w-4 text-brand-500" />
+                    <Clock className="h-4 w-4 text-trust-500" />
                   ) : (
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   )}

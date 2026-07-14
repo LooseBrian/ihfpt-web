@@ -1,5 +1,22 @@
-import { Bell, Mail, MessageSquare, FileCheck, AlertTriangle, RefreshCw, Package } from "lucide-react";
+"use client";
+
+import { Bell, Mail, MessageSquare, FileCheck, AlertTriangle, RefreshCw, Package, Clock } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { useAuth } from "@/lib/auth-context";
+import { useInquiry } from "@/lib/inquiry-context";
+
+function formatRelativeTime(iso: string): string {
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  if (days < 7) return `${days}天前`;
+  return d.toLocaleDateString("zh-CN");
+}
 
 const messages = [
   {
@@ -50,6 +67,42 @@ const messages = [
 ];
 
 export function SupplierMessages() {
+  const { user } = useAuth();
+  const { getSupplierInquiries, loading } = useInquiry();
+  const supplierInquiries = getSupplierInquiries(user?.name || "惠发食品有限公司");
+
+  // Generate notifications for unread buyer messages
+  const inquiryNotifications = supplierInquiries
+    .filter((inq) => inq.status !== "closed")
+    .flatMap((inq) =>
+      inq.messages
+        .filter((m) => m.sender === "buyer" && !m.read)
+        .map((m) => ({
+          icon: Mail,
+          type: "询盘提醒",
+          title: `采购商${inq.buyer}发送了新询盘`,
+          desc: `${inq.id} — ${inq.productName}，${m.content.slice(0, 60)}${m.content.length > 60 ? "..." : ""}`,
+          time: formatRelativeTime(m.createdAt),
+          unread: true,
+          color: "brand" as const,
+        }))
+    );
+
+  // Generate notifications for pending inquiries (new inquiry awaiting reply)
+  const pendingNotifications = supplierInquiries
+    .filter((inq) => inq.status === "pending")
+    .map((inq) => ({
+      icon: Clock,
+      type: "询盘提醒",
+      title: `新询盘${inq.id}待回复`,
+      desc: `${inq.productName} — 采购商${inq.buyer}发来新询盘，请尽快回复`,
+      time: formatRelativeTime(inq.createdAt),
+      unread: false,
+      color: "gold" as const,
+    }));
+
+  const allMessages = [...inquiryNotifications, ...pendingNotifications, ...messages];
+
   return (
     <section id="messages" className="py-16 bg-white">
       <div className="container mx-auto px-4">
@@ -59,7 +112,7 @@ export function SupplierMessages() {
         />
 
         <div className="max-w-3xl mx-auto space-y-3">
-          {messages.map((msg, idx) => {
+          {allMessages.map((msg, idx) => {
             const Icon = msg.icon;
             return (
               <div

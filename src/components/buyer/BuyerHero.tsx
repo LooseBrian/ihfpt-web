@@ -2,7 +2,7 @@ import { Bell, User, ChevronRight } from "lucide-react";
 
 export function BuyerHero() {
   return (
-    <section className="relative bg-gradient-to-br from-trust-900 via-trust-700 to-brand-800 text-white py-12 md:py-16 overflow-hidden">
+    <section className="relative bg-gradient-to-br from-trust-900 via-trust-700 to-trust-800 text-white py-12 md:py-16 overflow-hidden">
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           {/* Left: Welcome */}

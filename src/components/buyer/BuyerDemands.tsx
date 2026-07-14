@@ -42,11 +42,12 @@ const demands = [
 
 export function BuyerDemands() {
   return (
-    <section id="demands" className="py-16 bg-muted/30">
+    <section id="demands" className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <SectionHeader
           title="需求发布管理"
           subtitle="发布采购需求，基于品类、地区、资质精准匹配供应商（二期智能匹配）"
+          theme="trust"
         />
 
         <div className="max-w-5xl mx-auto">
@@ -72,13 +73,13 @@ export function BuyerDemands() {
                       <span className="text-xs font-mono text-trust-600 font-medium">{demand.id}</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                         demand.status === "active"
-                          ? "bg-brand-50 text-brand-700"
+                          ? "bg-trust-50 text-trust-700"
                           : "bg-muted text-muted-foreground"
                       }`}>
                         {demand.statusText}
                       </span>
                     </div>
-                    <h3 className="font-bold text-brand-900 text-sm mb-2">{demand.title}</h3>
+                    <h3 className="font-bold text-trust-900 text-sm mb-2">{demand.title}</h3>
                     <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Tag className="h-3 w-3" />
@@ -99,21 +100,21 @@ export function BuyerDemands() {
                         <Eye className="h-3 w-3" />
                         浏览
                       </div>
-                      <div className="font-bold text-brand-900">{demand.views}</div>
+                      <div className="font-bold text-trust-900">{demand.views}</div>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center gap-1 text-muted-foreground mb-1">
                         <Users className="h-3 w-3" />
                         回复
                       </div>
-                      <div className="font-bold text-brand-900">{demand.replies}</div>
+                      <div className="font-bold text-trust-900">{demand.replies}</div>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center gap-1 text-muted-foreground mb-1">
                         <Clock className="h-3 w-3" />
                         发布
                       </div>
-                      <div className="font-bold text-brand-900">{demand.date}</div>
+                      <div className="font-bold text-trust-900">{demand.date}</div>
                     </div>
                   </div>
                 </div>
