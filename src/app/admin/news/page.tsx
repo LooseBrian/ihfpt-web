@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Search,
@@ -8,12 +8,14 @@ import {
   Edit,
   Send,
   Trash2,
+  RotateCcw,
   X,
   Calendar,
   Filter,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGuard } from "@/components/admin/AdminGuard";
+import { checkSensitive } from "@/lib/sensitive-words";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +50,7 @@ interface NewsArticle {
   publishedAt: string;
   status: NewsStatus;
   content: string;
+  isDeleted?: boolean; // soft delete flag
 }
 
 // ===== Constants =====
@@ -173,6 +176,8 @@ const seedNews: NewsArticle[] = [
 
 // ===== Page =====
 
+const NEWS_STORAGE_KEY = "ihf_news";
+
 export default function NewsPage() {
   return (
     <AdminLayout>
@@ -185,6 +190,8 @@ export default function NewsPage() {
 
 function NewsContent() {
   const [articles, setArticles] = useState<NewsArticle[]>(seedNews);
+  const [loaded, setLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState<"list" | "trash">("list");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [regionFilter, setRegionFilter] = useState<string>("all");
@@ -199,8 +206,48 @@ function NewsContent() {
   const [formSource, setFormSource] = useState("");
   const [formContent, setFormContent] = useState("");
 
+  // Load from localStorage on mount (fall back to seed data)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(NEWS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as NewsArticle[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Ensure isDeleted flag exists on legacy records
+          setArticles(
+            parsed.map((a) => ({ ...a, isDeleted: a.isDeleted ?? false }))
+          );
+          setLoaded(true);
+          return;
+        }
+      }
+    } catch {
+      // ignore parse errors, fall back to seed
+    }
+    // No stored data: persist seed as the initial dataset
+    try {
+      localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(seedNews));
+    } catch {
+      // ignore storage errors
+    }
+    setLoaded(true);
+  }, []);
+
+  // Persist to localStorage on every change (after initial load)
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(articles));
+    } catch {
+      // ignore storage errors
+    }
+  }, [articles, loaded]);
+
   const filtered = useMemo(() => {
-    return articles.filter((a) => {
+    const base = articles.filter((a) =>
+      activeTab === "trash" ? a.isDeleted : !a.isDeleted
+    );
+    return base.filter((a) => {
       const matchSearch =
         !search ||
         a.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -211,14 +258,18 @@ function NewsContent() {
         regionFilter === "all" || a.region === regionFilter;
       return matchSearch && matchCategory && matchRegion;
     });
-  }, [articles, search, categoryFilter, regionFilter]);
+  }, [articles, activeTab, search, categoryFilter, regionFilter]);
 
   const stats = useMemo(
-    () => ({
-      total: articles.length,
-      published: articles.filter((a) => a.status === "published").length,
-      draft: articles.filter((a) => a.status === "draft").length,
-    }),
+    () => {
+      const live = articles.filter((a) => !a.isDeleted);
+      return {
+        total: live.length,
+        published: live.filter((a) => a.status === "published").length,
+        draft: live.filter((a) => a.status === "draft").length,
+        trash: articles.filter((a) => a.isDeleted).length,
+      };
+    },
     [articles]
   );
 
@@ -248,23 +299,51 @@ function NewsContent() {
     setDialogOpen(true);
   };
 
+  // Sensitive word check before publishing — returns true if safe or user confirms
+  const confirmPublishWithSensitiveCheck = (text: string): boolean => {
+    const matches = checkSensitive(text);
+    if (matches.length === 0) return true;
+    const words = matches.map((m) => m.word).join("、");
+    return confirm(
+      `检测到敏感词：${words}\n发布包含敏感词的内容可能违规，是否仍要发布？`
+    );
+  };
+
   const handlePublish = (id: string) => {
+    const article = articles.find((a) => a.id === id);
+    if (!article) return;
+    if (!confirmPublishWithSensitiveCheck(`${article.title} ${article.content}`))
+      return;
     setArticles((prev) =>
       prev.map((a) =>
         a.id === id ? { ...a, status: "published" as NewsStatus } : a
       )
     );
+    alert("资讯已发布");
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("确定要删除该资讯吗？此操作不可撤销。")) {
-      setArticles((prev) => prev.filter((a) => a.id !== id));
+    if (confirm("确定要将该资讯移入回收站吗？可前往回收站恢复。")) {
+      setArticles((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, isDeleted: true } : a))
+      );
     }
+  };
+
+  const handleRestore = (id: string) => {
+    setArticles((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, isDeleted: false } : a))
+    );
+    alert("资讯已恢复");
   };
 
   const handleSubmit = () => {
     if (!formTitle.trim()) {
       alert("请填写资讯标题");
+      return;
+    }
+    // Sensitive word check before publishing content
+    if (!confirmPublishWithSensitiveCheck(`${formTitle} ${formContent}`)) {
       return;
     }
     const now = new Date();
@@ -320,13 +399,15 @@ function NewsContent() {
             管理平台资讯内容，包括发布、编辑、上下架等操作
           </p>
         </div>
-        <Button
-          onClick={openCreate}
-          className="bg-brand-600 hover:bg-brand-700 text-white"
-        >
-          <Plus className="h-4 w-4" />
-          发布资讯
-        </Button>
+        {activeTab === "list" && (
+          <Button
+            onClick={openCreate}
+            className="bg-brand-600 hover:bg-brand-700 text-white"
+          >
+            <Plus className="h-4 w-4" />
+            发布资讯
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
@@ -334,6 +415,55 @@ function NewsContent() {
         <StatCard label="资讯总数" value={stats.total} color="brand" />
         <StatCard label="已发布" value={stats.published} color="trust" />
         <StatCard label="草稿箱" value={stats.draft} color="gold" />
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("list");
+            setSearch("");
+            setCategoryFilter("all");
+            setRegionFilter("all");
+          }}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm border transition-colors ${
+            activeTab === "list"
+              ? "bg-brand-600 border-brand-600 text-white"
+              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <Newspaper className="h-4 w-4" />
+          全部资讯
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("trash");
+            setSearch("");
+            setCategoryFilter("all");
+            setRegionFilter("all");
+          }}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm border transition-colors ${
+            activeTab === "trash"
+              ? "bg-red-600 border-red-600 text-white"
+              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <Trash2 className="h-4 w-4" />
+          回收站
+          {stats.trash > 0 && (
+            <span
+              className={`min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full text-xs ${
+                activeTab === "trash"
+                  ? "bg-white/25 text-white"
+                  : "bg-red-100 text-red-600"
+              }`}
+            >
+              {stats.trash}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Filters */}
@@ -425,56 +555,76 @@ function NewsContent() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge
-                      variant="secondary"
-                      className={
-                        a.status === "published"
-                          ? "bg-brand-100 text-brand-700"
-                          : "bg-slate-100 text-slate-500"
-                      }
-                    >
-                      {a.status === "published" ? "已发布" : "草稿"}
-                    </Badge>
+                    {a.isDeleted ? (
+                      <Badge className="bg-red-900 text-red-100">已删除</Badge>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className={
+                          a.status === "published"
+                            ? "bg-brand-100 text-brand-700"
+                            : "bg-slate-100 text-slate-500"
+                        }
+                      >
+                        {a.status === "published" ? "已发布" : "草稿"}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => openEdit(a)}
-                        title="编辑"
-                        className="text-slate-500 hover:text-brand-600"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {a.status === "draft" && (
+                    {activeTab === "trash" ? (
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => handlePublish(a.id)}
-                          title="发布"
+                          onClick={() => handleRestore(a.id)}
+                          title="恢复"
                           className="text-slate-500 hover:text-brand-600"
                         >
-                          <Send className="h-4 w-4" />
+                          <RotateCcw className="h-4 w-4" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleDelete(a.id)}
-                        title="删除"
-                        className="text-slate-500 hover:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => openEdit(a)}
+                          title="编辑"
+                          className="text-slate-500 hover:text-brand-600"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {a.status === "draft" && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handlePublish(a.id)}
+                            title="发布"
+                            className="text-slate-500 hover:text-brand-600"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleDelete(a.id)}
+                          title="移入回收站"
+                          className="text-slate-500 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
-                    暂无匹配的资讯
+                    {activeTab === "trash"
+                      ? "回收站为空"
+                      : "暂无匹配的资讯"}
                   </td>
                 </tr>
               )}

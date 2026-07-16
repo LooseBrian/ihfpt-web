@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, Eye, Edit, Trash2, CheckCircle2, Clock, XCircle,
   Package, X, Upload, Search, Filter, ChevronDown, ChevronUp,
-  ArrowUpDown, Image as ImageIcon, Calendar,
+  ArrowUpDown, Image as ImageIcon, Calendar, Loader2, RotateCcw,
 } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { Button } from "@/components/ui/button";
@@ -19,99 +19,16 @@ import {
 } from "@/components/ui/select";
 import { MediaUpload, IMAGE_LIMITS, VIDEO_LIMITS } from "@/components/product/MediaUpload";
 import type { UploadedImage, UploadedVideo } from "@/components/product/MediaUpload";
+import { useAuth } from "@/lib/auth-context";
+import { useProducts, type ManagedProduct, type ProductStatus } from "@/lib/product-context";
 
-// ===== Types =====
+// ===== Status config =====
 
-type ProductStatus = "listed" | "pending" | "offline" | "draft";
-
-interface ProductItem {
-  id: string;
-  name: string;
-  category: string;
-  price: string;
-  moq: string;
-  status: ProductStatus;
-  statusText: string;
-  image: string;
-  imageCount: number;
-  videoCount: number;
-  updatedAt: string; // ISO date string
-}
-
-// ===== Seed data =====
-
-const seedProducts: ProductItem[] = [
-  {
-    id: "SKU-2026-0188",
-    name: "清真冷冻羊腿肉（分割）",
-    category: "牛羊肉制品",
-    price: "¥85 - ¥92 / kg",
-    moq: "200 kg",
-    status: "listed",
-    statusText: "已上架",
-    image: "https://loremflickr.com/120/80/meat,lamb",
-    imageCount: 6,
-    videoCount: 2,
-    updatedAt: "2026-07-10T14:30:00.000Z",
-  },
-  {
-    id: "SKU-2026-0185",
-    name: "清真预制菜 — 咖喱牛肉",
-    category: "清真预制菜",
-    price: "¥45 - ¥55 / box",
-    moq: "500 box",
-    status: "listed",
-    statusText: "已上架",
-    image: "https://loremflickr.com/120/80/curry,beef",
-    imageCount: 4,
-    videoCount: 1,
-    updatedAt: "2026-07-09T10:15:00.000Z",
-  },
-  {
-    id: "SKU-2026-0179",
-    name: "清真速冻调理品 — 烤鸡翅",
-    category: "速冻调理品",
-    price: "¥32 - ¥38 / kg",
-    moq: "300 kg",
-    status: "listed",
-    statusText: "已上架",
-    image: "https://loremflickr.com/120/80/chicken,wings",
-    imageCount: 3,
-    videoCount: 0,
-    updatedAt: "2026-07-08T16:45:00.000Z",
-  },
-  {
-    id: "SKU-2026-0168",
-    name: "清真速冻饺子 — 牛肉洋葱",
-    category: "速冻面点",
-    price: "¥25 - ¥32 / kg",
-    moq: "500 kg",
-    status: "offline",
-    statusText: "已下架",
-    image: "https://loremflickr.com/120/80/dumpling,beef",
-    imageCount: 2,
-    videoCount: 0,
-    updatedAt: "2026-07-05T09:20:00.000Z",
-  },
-  {
-    id: "SKU-2026-0155",
-    name: "清真复合调味料 — 孜然粉",
-    category: "调味料",
-    price: "¥18 - ¥25 / kg",
-    moq: "1000 kg",
-    status: "pending",
-    statusText: "审核中",
-    image: "https://loremflickr.com/120/80/spice,cumin",
-    imageCount: 5,
-    videoCount: 1,
-    updatedAt: "2026-07-03T11:00:00.000Z",
-  },
-];
-
-const statusConfig: Record<ProductStatus, { icon: typeof CheckCircle2; color: string; label: string }> = {
-  listed: { icon: CheckCircle2, color: "text-brand-600 bg-brand-50", label: "已上架" },
+const statusConfig: Record<Exclude<ProductStatus, "deleted">, { icon: typeof CheckCircle2; color: string; label: string }> = {
+  approved: { icon: CheckCircle2, color: "text-brand-600 bg-brand-50", label: "已上架" },
   pending: { icon: Clock, color: "text-gold-600 bg-gold-50", label: "审核中" },
   offline: { icon: XCircle, color: "text-muted-foreground bg-muted", label: "已下架" },
+  rejected: { icon: XCircle, color: "text-red-600 bg-red-50", label: "已驳回" },
   draft: { icon: Edit, color: "text-blue-600 bg-blue-50", label: "草稿" },
 };
 
@@ -129,9 +46,10 @@ const categoryOptions = [
 
 const statusOptions = [
   { value: "all", label: "全部状态" },
-  { value: "listed", label: "已上架" },
+  { value: "approved", label: "已上架" },
   { value: "pending", label: "审核中" },
   { value: "offline", label: "已下架" },
+  { value: "rejected", label: "已驳回" },
   { value: "draft", label: "草稿" },
 ];
 
@@ -149,13 +67,71 @@ function formatDate(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Compute action button config based on product status
+function getActionButton(
+  product: ManagedProduct,
+  ctx: {
+    takeDownProduct: (id: string) => void;
+    deleteProduct: (id: string) => void;
+    relistProduct: (id: string) => void;
+  }
+) {
+  switch (product.status) {
+    case "approved":
+      return {
+        icon: Trash2,
+        tooltip: "下架产品",
+        onClick: () => {
+          ctx.takeDownProduct(product.id);
+          alert("产品已下架");
+        },
+      };
+    case "pending":
+    case "draft":
+    case "rejected":
+      return {
+        icon: Trash2,
+        tooltip: "删除产品",
+        onClick: () => {
+          ctx.deleteProduct(product.id);
+          alert("产品已删除");
+        },
+      };
+    case "offline":
+      return {
+        icon: RotateCcw,
+        tooltip: "重新上架",
+        onClick: () => {
+          ctx.relistProduct(product.id);
+          alert("产品已重新上架");
+        },
+      };
+    default:
+      return null;
+  }
+}
+
 // ===== Main Component =====
 
 export function SupplierProducts() {
   const router = useRouter();
+  const { user } = useAuth();
+  const {
+    loading,
+    takeDownProduct,
+    deleteProduct,
+    relistProduct,
+    getProductsBySupplier,
+  } = useProducts();
 
-  // Product list state (seed + localStorage additions)
-  const [products, setProducts] = useState<ProductItem[]>(seedProducts);
+  // ===== Supplier products (non-deleted) =====
+  const supplierProducts = useMemo(
+    () =>
+      getProductsBySupplier(user?.name || "").filter(
+        (p) => p.status !== "deleted"
+      ),
+    [getProductsBySupplier, user?.name]
+  );
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState("");
@@ -171,29 +147,9 @@ export function SupplierProducts() {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [uploadedVideos, setUploadedVideos] = useState<UploadedVideo[]>([]);
 
-  // ===== Load newly added products from localStorage =====
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("ihf_new_products");
-      if (stored) {
-        const newProducts: ProductItem[] = JSON.parse(stored);
-        if (Array.isArray(newProducts) && newProducts.length > 0) {
-          // Merge: only add products that don't already exist
-          setProducts((prev) => {
-            const existingIds = new Set(prev.map((p) => p.id));
-            const toAdd = newProducts.filter((p) => !existingIds.has(p.id));
-            return [...toAdd, ...prev];
-          });
-        }
-      }
-    } catch {
-      // ignore parse errors
-    }
-  }, []);
-
   // ===== Filtered + sorted products =====
   const filteredProducts = useMemo(() => {
-    let result = [...products];
+    let result = [...supplierProducts];
 
     // Search filter
     if (searchQuery.trim()) {
@@ -202,7 +158,7 @@ export function SupplierProducts() {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           p.id.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q)
+          (p.category || "").toLowerCase().includes(q)
       );
     }
 
@@ -224,17 +180,19 @@ export function SupplierProducts() {
       } else if (sortField === "name") {
         cmp = a.name.localeCompare(b.name, "zh-CN");
       } else if (sortField === "price") {
-        cmp = a.price.localeCompare(b.price);
+        cmp = (a.priceRange || "").localeCompare(b.priceRange || "");
       } else if (sortField === "status") {
-        cmp = a.statusText.localeCompare(b.statusText, "zh-CN");
+        const aLabel = statusConfig[a.status as Exclude<ProductStatus, "deleted">]?.label || "";
+        const bLabel = statusConfig[b.status as Exclude<ProductStatus, "deleted">]?.label || "";
+        cmp = aLabel.localeCompare(bLabel, "zh-CN");
       } else if (sortField === "category") {
-        cmp = a.category.localeCompare(b.category, "zh-CN");
+        cmp = (a.category || "").localeCompare(b.category || "", "zh-CN");
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
 
     return result;
-  }, [products, searchQuery, filterCategory, filterStatus, sortField, sortDir]);
+  }, [supplierProducts, searchQuery, filterCategory, filterStatus, sortField, sortDir]);
 
   // ===== Handlers =====
 
@@ -273,6 +231,9 @@ export function SupplierProducts() {
     (searchQuery ? 1 : 0) +
     (filterCategory !== "all" ? 1 : 0) +
     (filterStatus !== "all" ? 1 : 0);
+
+  const sortLabel =
+    sortField === "updatedAt" ? "修改时间" : sortField === "name" ? "名称" : sortField === "price" ? "价格" : sortField === "status" ? "状态" : "品类";
 
   return (
     <section id="products" className="py-16 bg-muted/30">
@@ -372,14 +333,14 @@ export function SupplierProducts() {
           {/* Result count */}
           <div className="flex items-center justify-between mb-2 text-sm">
             <span className="text-muted-foreground">
-              共 <span className="font-bold text-foreground">{filteredProducts.length}</span> 个产品
-              {filteredProducts.length !== products.length && (
-                <span className="text-muted-foreground">（已筛选，共 {products.length} 个）</span>
+              共 <span className="font-bold text-foreground">{loading ? "..." : filteredProducts.length}</span> 个产品
+              {!loading && filteredProducts.length !== supplierProducts.length && (
+                <span className="text-muted-foreground">（已筛选，共 {supplierProducts.length} 个）</span>
               )}
             </span>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              按{sortField === "updatedAt" ? "修改时间" : sortField === "name" ? "名称" : sortField === "price" ? "价格" : "状态"}
+              按{sortLabel}
               {sortDir === "desc" ? "降序" : "升序"}排列
             </span>
           </div>
@@ -446,8 +407,13 @@ export function SupplierProducts() {
               <div className="col-span-1">操作</div>
             </div>
 
-            {/* Table rows */}
-            {filteredProducts.length === 0 ? (
+            {/* Loading state */}
+            {loading ? (
+              <div className="px-6 py-16 text-center">
+                <Loader2 className="h-8 w-8 text-brand-600 mx-auto mb-3 animate-spin" />
+                <p className="text-sm text-muted-foreground">加载产品列表中...</p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <Package className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">
@@ -461,8 +427,11 @@ export function SupplierProducts() {
               </div>
             ) : (
               filteredProducts.map((product) => {
-                const status = statusConfig[product.status as ProductStatus] || statusConfig.offline;
+                const status = statusConfig[product.status as Exclude<ProductStatus, "deleted">] || statusConfig.offline;
                 const StatusIcon = status.icon;
+                const imageCount = product.imageCount ?? 0;
+                const videoCount = product.videoCount ?? 0;
+                const actionBtn = getActionButton(product, { takeDownProduct, deleteProduct, relistProduct });
                 return (
                   <div
                     key={product.id}
@@ -475,9 +444,9 @@ export function SupplierProducts() {
                         alt={product.name}
                         className="w-16 h-12 rounded-lg object-cover"
                       />
-                      {(product.imageCount > 1 || product.videoCount > 0) && (
+                      {(imageCount > 1 || videoCount > 0) && (
                         <span className="absolute -bottom-1 -right-1 bg-brand-600 text-white text-[9px] px-1 py-0.5 rounded-full font-bold">
-                          {product.imageCount}+{product.videoCount}V
+                          {imageCount}+{videoCount}V
                         </span>
                       )}
                     </div>
@@ -492,19 +461,19 @@ export function SupplierProducts() {
                     {/* Category */}
                     <div className="md:col-span-2">
                       <span className="text-xs px-2 py-0.5 bg-brand-50 text-brand-700 rounded font-medium">
-                        {product.category}
+                        {product.category || "未分类"}
                       </span>
                     </div>
                     {/* Price + MOQ */}
                     <div className="md:col-span-1">
-                      <div className="text-sm text-brand-700 font-semibold">{product.price}</div>
-                      <div className="text-xs text-muted-foreground">MOQ: {product.moq}</div>
+                      <div className="text-sm text-brand-700 font-semibold">{product.priceRange || "面议"}</div>
+                      <div className="text-xs text-muted-foreground">MOQ: {product.moq || "面议"}</div>
                     </div>
                     {/* Status */}
                     <div className="md:col-span-1">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${status.color}`}>
                         <StatusIcon className="h-3 w-3" />
-                        {product.statusText}
+                        {status.label}
                       </span>
                     </div>
                     {/* Updated time */}
@@ -531,14 +500,17 @@ export function SupplierProducts() {
                           预览产品
                         </span>
                       </button>
-                      <button
-                        className="relative group/btn p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 group-hover/btn:opacity-100 transition-opacity z-50">
-                          下架产品
-                        </span>
-                      </button>
+                      {actionBtn && (
+                        <button
+                          onClick={actionBtn.onClick}
+                          className="relative group/btn p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-brand-600 transition-colors"
+                        >
+                          <actionBtn.icon className="h-3.5 w-3.5" />
+                          <span className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs text-background opacity-0 group-hover/btn:opacity-100 transition-opacity z-50">
+                            {actionBtn.tooltip}
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

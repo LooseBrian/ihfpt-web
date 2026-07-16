@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { TopBar } from "@/components/layout/TopBar";
 import { BackToTop } from "@/components/shared/BackToTop";
 import { ProductLobbyHero } from "@/components/products/ProductLobbyHero";
+import { InquiryBrowseSection } from "@/components/products/InquiryBrowseSection";
 import { CategoryFloorNav } from "@/components/products/CategoryFloorNav";
 import {
   ProductFilterSidebar,
@@ -21,7 +22,8 @@ import { ProductGrid } from "@/components/products/ProductGrid";
 import { ProductServicesSection } from "@/components/products/ProductServicesSection";
 import { ProductStatsSection } from "@/components/products/ProductStatsSection";
 import { CTASection } from "@/components/sections/CTASection";
-import { products, categories, subcategories } from "@/lib/data";
+import { categories, subcategories } from "@/lib/data";
+import { useProducts } from "@/lib/product-context";
 
 function parsePrice(priceRange: string): number {
   const match = priceRange.match(/\$([\d.]+)/);
@@ -40,14 +42,17 @@ const initialFilters: ProductFilters = {
 };
 
 export default function ProductsPage() {
+  const { getApprovedProducts, loading } = useProducts();
   const [filters, setFilters] = useState<ProductFilters>(initialFilters);
   const [sort, setSort] = useState<SortOption>("default");
   const [pageSize, setPageSize] = useState<PageSize>(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
+  const approvedProducts = getApprovedProducts();
+
   const filteredProducts = useMemo(() => {
-    let result = [...products];
+    let result = [...approvedProducts];
 
     // Certification filter
     if (filters.certifications.length > 0) {
@@ -144,7 +149,7 @@ export default function ProductsPage() {
     }
 
     return result;
-  }, [filters, sort]);
+  }, [approvedProducts, filters, sort]);
 
   // Reset to page 1 when filters or pageSize change
   useEffect(() => {
@@ -162,6 +167,7 @@ export default function ProductsPage() {
       <Navbar />
       <main className="flex-1 bg-muted/20">
         <ProductLobbyHero />
+        <InquiryBrowseSection />
         <CategoryFloorNav />
 
         <section className="py-8">
@@ -187,13 +193,22 @@ export default function ProductsPage() {
                   currentRange={currentRange}
                 />
 
-                <ProductGrid
-                  products={filteredProducts}
-                  viewMode={viewMode}
-                  currentPage={currentPage}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                />
+                {loading ? (
+                  <div className="flex items-center justify-center py-20 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-brand-600" />
+                      <span>产品加载中...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <ProductGrid
+                    products={filteredProducts}
+                    viewMode={viewMode}
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                  />
+                )}
               </div>
             </div>
           </div>

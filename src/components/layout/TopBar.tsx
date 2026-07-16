@@ -17,6 +17,7 @@ import {
   Truck,
   Heart,
   FileText,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -247,7 +248,11 @@ export function TopBar() {
               </div>
               <DropdownMenuItem className="cursor-pointer" onClick={() => { window.location.href = consoleUrl; }}>
                 <LayoutDashboard className="h-4 w-4 mr-2" />
-                进入控制台
+                进入工作台
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => { window.location.href = "/account/settings"; }}>
+                <Settings className="h-4 w-4 mr-2" />
+                账号设置
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />

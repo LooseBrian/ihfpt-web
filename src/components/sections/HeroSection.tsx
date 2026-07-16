@@ -1,14 +1,26 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Search, UserPlus, ArrowRight } from "lucide-react";
+import { hotSearchTags } from "@/lib/search";
 
 export function HeroSection() {
-  const handleSearchProducts = () => {
-    const productsSection = document.getElementById("products");
-    if (productsSection) {
-      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) {
+      router.push(`/search?q=${encodeURIComponent(q)}`);
     }
+  };
+
+  const handleTagClick = (tag: string) => {
+    router.push(`/search?q=${encodeURIComponent(tag)}`);
   };
 
   return (
@@ -45,17 +57,54 @@ export function HeroSection() {
           <p className="text-xl md:text-3xl font-semibold text-gold-400 mb-4">
             中国特色产业链出海平台
           </p>
-          <p className="text-base md:text-lg text-brand-300 mb-10 max-w-xl mx-auto">
+          <p className="text-base md:text-lg text-brand-300 mb-8 max-w-xl mx-auto">
             国家级、全球化、垂直型清真食品 B2B 贸易与产业服务平台
             <br className="hidden md:block" />
             链接中国优质清真食品产能与全球穆斯林消费市场
           </p>
 
+          {/* Search bar */}
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-4">
+            <div className="flex gap-2 bg-white rounded-xl p-1.5 shadow-2xl">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="搜索产品名、供应商、认证类型..."
+                  className="h-12 pl-11 border-0 focus-visible:ring-0 text-base"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-bold px-6 h-12 gap-2"
+              >
+                <Search className="h-5 w-5" />
+                搜索
+              </Button>
+            </div>
+          </form>
+
+          {/* Hot search tags */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+            <span className="text-xs text-brand-300">热门搜索:</span>
+            {hotSearchTags.slice(0, 8).map((tag) => (
+              <button
+                key={tag}
+                onClick={() => handleTagClick(tag)}
+                className="px-3 py-1 text-xs bg-brand-800/60 hover:bg-brand-700 border border-brand-700/50 rounded-full text-brand-100 hover:text-white transition-colors"
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               size="lg"
               className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-bold px-8 gap-2 cursor-pointer"
-              onClick={handleSearchProducts}
+              onClick={() => router.push("/products")}
             >
               <Search className="h-5 w-5" />
               寻找产品

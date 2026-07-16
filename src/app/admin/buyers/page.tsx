@@ -6,20 +6,25 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
-  Pause,
-  Play,
+  Ban,
+  Unlock,
+  MessageSquareOff,
+  MessageSquare,
   UserCheck,
   Clock,
   UserPlus,
   Mail,
   MapPin,
+  X,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AdminGuard, useAdminAuth } from "@/lib/admin-auth-context";
+import { AdminGuard } from "@/components/admin/AdminGuard";
+import { useAdminAuth } from "@/lib/admin-auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -43,6 +48,15 @@ interface AdminBuyer {
   verifyStatus: VerifyStatus;
   status: BuyerStatus;
   registerTime: string;
+}
+
+// Restriction info (used for both ban and silence)
+interface RestrictionInfo {
+  targetId: string;
+  duration: number; // days, 0 = permanent
+  appliedAt: string; // ISO string
+  expiresAt: string | null; // ISO string, null = permanent
+  reason: string;
 }
 
 // ===== Seed Data =====
@@ -164,12 +178,28 @@ const regionOptions = [
 
 const PAGE_SIZE = 5;
 
+// Restriction duration options (days, 0 = permanent)
+const restrictionDurationOptions = [
+  { value: 1, label: "1天" },
+  { value: 3, label: "3天" },
+  { value: 7, label: "7天" },
+  { value: 0, label: "永久" },
+];
+
+// Calculate remaining days; returns null if permanent, -1 if expired
+function getRemainingDays(expiresAt: string | null): number {
+  if (!expiresAt) return 0; // permanent
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return -1;
+  return Math.ceil(ms / (24 * 60 * 60 * 1000));
+}
+
 // ===== Page Component =====
 
 export default function BuyerManagementPage() {
   return (
     <AdminLayout>
-      <AdminGuard permission="buyers.view">
+      <AdminGuard requiredPermission="buyers.suspend">
         <BuyerManagementContent />
       </AdminGuard>
     </AdminLayout>
@@ -184,6 +214,31 @@ function BuyerManagementContent() {
   const [regionFilter, setRegionFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Restriction state: ban (禁止登录) and silence (禁言), keyed by buyer id
+  const [banInfo, setBanInfo] = useState<Record<string, RestrictionInfo>>(() => {
+    const now = new Date().toISOString();
+    const init: Record<string, RestrictionInfo> = {};
+    for (const b of seedBuyers) {
+      if (b.status === "suspended") {
+        init[b.id] = {
+          targetId: b.id,
+          duration: 0,
+          appliedAt: now,
+          expiresAt: null,
+          reason: "历史暂停记录",
+        };
+      }
+    }
+    return init;
+  });
+  const [silenceInfo, setSilenceInfo] = useState<Record<string, RestrictionInfo>>({});
+
+  // Shared dialog state for applying a restriction (ban or silence)
+  const [dialogType, setDialogType] = useState<"ban" | "silence" | null>(null);
+  const [dialogTarget, setDialogTarget] = useState<AdminBuyer | null>(null);
+  const [dialogDuration, setDialogDuration] = useState<number>(1);
+  const [dialogReason, setDialogReason] = useState("");
+
   // Stats
   const stats = useMemo(() => {
     const total = buyers.length;
@@ -193,6 +248,20 @@ function BuyerManagementContent() {
     const thisMonth = buyers.filter((b) => b.registerTime.startsWith("2024-06")).length;
     return { total, verified, pending, thisMonth };
   }, [buyers]);
+
+  // Active restriction lookups (auto-expire)
+  const getActiveBan = (id: string): RestrictionInfo | null => {
+    const info = banInfo[id];
+    if (!info) return null;
+    if (getRemainingDays(info.expiresAt) === -1) return null;
+    return info;
+  };
+  const getActiveSilence = (id: string): RestrictionInfo | null => {
+    const info = silenceInfo[id];
+    if (!info) return null;
+    if (getRemainingDays(info.expiresAt) === -1) return null;
+    return info;
+  };
 
   // Filter
   const filtered = useMemo(() => {
@@ -216,20 +285,75 @@ function BuyerManagementContent() {
   }, [buyers, search, verifyFilter, regionFilter]);
 
   // Pagination
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
   const pageData = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
   );
 
-  const handleToggleStatus = (id: string) => {
-    setBuyers((prev) =>
-      prev.map((b) =>
-        b.id === id
-          ? { ...b, status: b.status === "active" ? "suspended" : "active" }
-          : b
-      )
+  const openRestrictionDialog = (type: "ban" | "silence", buyer: AdminBuyer) => {
+    setDialogType(type);
+    setDialogTarget(buyer);
+    setDialogDuration(1);
+    setDialogReason("");
+  };
+
+  const handleRestrictionConfirm = () => {
+    if (!dialogTarget || !dialogType) return;
+    const now = new Date();
+    const appliedAt = now.toISOString();
+    const expiresAt =
+      dialogDuration === 0
+        ? null
+        : new Date(now.getTime() + dialogDuration * 24 * 60 * 60 * 1000).toISOString();
+    const record: RestrictionInfo = {
+      targetId: dialogTarget.id,
+      duration: dialogDuration,
+      appliedAt,
+      expiresAt,
+      reason: dialogReason || "未填写原因",
+    };
+    if (dialogType === "ban") {
+      setBanInfo((prev) => ({ ...prev, [dialogTarget.id]: record }));
+      setBuyers((prev) =>
+        prev.map((b) =>
+          b.id === dialogTarget.id ? { ...b, status: "suspended" } : b
+        )
+      );
+    } else {
+      setSilenceInfo((prev) => ({ ...prev, [dialogTarget.id]: record }));
+    }
+    const label = dialogType === "ban" ? "禁止登录" : "禁言";
+    alert(
+      dialogDuration === 0
+        ? `已永久${label}该采购商`
+        : `已${label}该采购商 ${dialogDuration} 天`
     );
+    setDialogType(null);
+    setDialogTarget(null);
+    setDialogReason("");
+  };
+
+  const handleLiftBan = (id: string) => {
+    setBanInfo((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setBuyers((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: "active" } : b))
+    );
+    alert("已解除禁止登录");
+  };
+
+  const handleLiftSilence = (id: string) => {
+    setSilenceInfo((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    alert("已解除禁言");
   };
 
   const resetFilters = () => {
@@ -355,6 +479,8 @@ function BuyerManagementContent() {
                 <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">地区</th>
                 <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">询盘数</th>
                 <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">认证状态</th>
+                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">账户状态</th>
+                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">消息状态</th>
                 <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">注册时间</th>
                 <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">操作</th>
               </tr>
@@ -362,7 +488,7 @@ function BuyerManagementContent() {
             <tbody>
               {pageData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
+                  <td colSpan={10} className="text-center py-12 text-slate-400">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     暂无符合条件的采购商
                   </td>
@@ -370,14 +496,19 @@ function BuyerManagementContent() {
               ) : (
                 pageData.map((buyer) => {
                   const vc = verifyConfig[buyer.verifyStatus];
+                  const activeBan = getActiveBan(buyer.id);
+                  const banRemaining = activeBan
+                    ? getRemainingDays(activeBan.expiresAt)
+                    : null;
+                  const activeSilence = getActiveSilence(buyer.id);
+                  const silenceRemaining = activeSilence
+                    ? getRemainingDays(activeSilence.expiresAt)
+                    : null;
                   return (
                     <tr key={buyer.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
                       {/* Name */}
                       <td className="px-4 py-3">
                         <span className="font-medium text-slate-900">{buyer.name}</span>
-                        {buyer.status === "suspended" && (
-                          <span className="ml-2 text-xs text-red-500">（已暂停）</span>
-                        )}
                       </td>
                       {/* Contact */}
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{buyer.contact}</td>
@@ -406,29 +537,79 @@ function BuyerManagementContent() {
                       <td className="px-4 py-3">
                         <Badge className={vc.className}>{vc.label}</Badge>
                       </td>
+                      {/* Account Status (ban) */}
+                      <td className="px-4 py-3">
+                        {activeBan ? (
+                          <Badge className="bg-red-100 text-red-700">
+                            {banRemaining === 0
+                              ? "永久禁止"
+                              : `已禁止 (剩余 ${banRemaining}天)`}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-brand-100 text-brand-700">正常</Badge>
+                        )}
+                      </td>
+                      {/* Messaging Status (silence) */}
+                      <td className="px-4 py-3">
+                        {activeSilence ? (
+                          <Badge className="bg-gold-100 text-gold-700">
+                            {silenceRemaining === 0
+                              ? "永久禁言"
+                              : `已禁言 (剩余 ${silenceRemaining}天)`}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-brand-100 text-brand-700">正常</Badge>
+                        )}
+                      </td>
                       {/* Register Time */}
                       <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{buyer.registerTime}</td>
                       {/* Actions */}
                       <td className="px-4 py-3">
                         {hasPermission("buyers.suspend") ? (
-                          <Button
-                            size="sm"
-                            variant={buyer.status === "active" ? "destructive" : "outline"}
-                            className="gap-1"
-                            onClick={() => handleToggleStatus(buyer.id)}
-                          >
-                            {buyer.status === "active" ? (
-                              <>
-                                <Pause className="h-3.5 w-3.5" />
-                                暂停
-                              </>
+                          <div className="flex flex-col gap-1.5">
+                            {activeBan ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 h-8"
+                                onClick={() => handleLiftBan(buyer.id)}
+                              >
+                                <Unlock className="h-3.5 w-3.5" />
+                                解除禁止
+                              </Button>
                             ) : (
-                              <>
-                                <Play className="h-3.5 w-3.5" />
-                                恢复
-                              </>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="gap-1 h-8"
+                                onClick={() => openRestrictionDialog("ban", buyer)}
+                              >
+                                <Ban className="h-3.5 w-3.5" />
+                                禁止登录
+                              </Button>
                             )}
-                          </Button>
+                            {activeSilence ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 h-8"
+                                onClick={() => handleLiftSilence(buyer.id)}
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                解除禁言
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 h-8 border-gold-200 text-gold-700 hover:bg-gold-50"
+                                onClick={() => openRestrictionDialog("silence", buyer)}
+                              >
+                                <MessageSquareOff className="h-3.5 w-3.5" />
+                                禁言
+                              </Button>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-xs text-slate-400">—</span>
                         )}
@@ -450,7 +631,7 @@ function BuyerManagementContent() {
             <Button
               variant="outline"
               size="icon-sm"
-              disabled={currentPage === 1}
+              disabled={safePage === 1}
               onClick={() => setCurrentPage((p) => p - 1)}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -460,7 +641,7 @@ function BuyerManagementContent() {
                 key={page}
                 onClick={() => setCurrentPage(page)}
                 className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
-                  currentPage === page
+                  safePage === page
                     ? "bg-brand-600 text-white font-medium"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
@@ -471,7 +652,7 @@ function BuyerManagementContent() {
             <Button
               variant="outline"
               size="icon-sm"
-              disabled={currentPage === totalPages || totalPages === 0}
+              disabled={safePage >= totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
             >
               <ChevronRight className="h-4 w-4" />
@@ -479,6 +660,89 @@ function BuyerManagementContent() {
           </div>
         </div>
       </div>
+
+      {/* Restriction Dialog (ban / silence) */}
+      {dialogTarget && dialogType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setDialogType(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  dialogType === "ban" ? "bg-red-50" : "bg-gold-50"
+                }`}
+              >
+                {dialogType === "ban" ? (
+                  <Ban className="h-4 w-4 text-red-600" />
+                ) : (
+                  <MessageSquareOff className="h-4 w-4 text-gold-600" />
+                )}
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">
+                {dialogType === "ban" ? "禁止登录" : "禁言"}采购商
+              </h3>
+            </div>
+            <p className="text-sm text-slate-500 mb-1">
+              企业：
+              <span className="font-medium text-slate-700">
+                {dialogTarget.name}
+              </span>
+            </p>
+            <p className="text-sm text-slate-500 mb-3">
+              联系人：
+              <span className="text-slate-700">{dialogTarget.contact}</span>
+            </p>
+            <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+              {dialogType === "ban" ? "禁止登录时长" : "禁言时长"}{" "}
+              <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {restrictionDurationOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setDialogDuration(opt.value)}
+                  className={`h-9 rounded-md text-sm border transition-colors ${
+                    dialogDuration === opt.value
+                      ? dialogType === "ban"
+                        ? "bg-red-600 border-red-600 text-white"
+                        : "bg-gold-600 border-gold-600 text-white"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {opt.value === 0 ? "永久" : `${opt.label}`}
+                </button>
+              ))}
+            </div>
+            <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+              {dialogType === "ban" ? "禁止原因" : "禁言原因"}
+            </label>
+            <Textarea
+              placeholder="请输入原因（选填）"
+              value={dialogReason}
+              onChange={(e) => setDialogReason(e.target.value)}
+              rows={3}
+              className="resize-none"
+            />
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={() => setDialogType(null)}>
+                取消
+              </Button>
+              <Button
+                size="sm"
+                variant={dialogType === "ban" ? "destructive" : "outline"}
+                onClick={handleRestrictionConfirm}
+              >
+                <X className="h-3.5 w-3.5" />
+                确认{dialogType === "ban" ? "禁止" : "禁言"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

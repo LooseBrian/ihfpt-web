@@ -1,11 +1,32 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { hotSearchTags } from "@/lib/data";
+import { hotSearchTags } from "@/lib/search";
 
 export function ProductLobbyHero() {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) {
+      router.push(`/search?q=${encodeURIComponent(q)}`);
+    }
+  };
+
+  const handleTagClick = (tag: string) => {
+    router.push(`/search?q=${encodeURIComponent(tag)}`);
+  };
+
+  const handleInquiry = () => {
+    router.push("/buyer#demands");
+  };
+
   return (
     <section className="relative text-white py-16 md:py-24 overflow-hidden">
       {/* Background image */}
@@ -28,19 +49,32 @@ export function ProductLobbyHero() {
           </p>
 
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto mb-6">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索产品名、供应商、认证类型..."
                 className="pl-10 h-12 bg-white text-foreground border-0 shadow-lg rounded-lg text-base"
               />
             </div>
-            <Button className="h-12 px-6 bg-gold-500 hover:bg-gold-600 text-white font-semibold shadow-lg rounded-lg">
+            <Button
+              type="submit"
+              className="h-12 px-6 bg-gold-500 hover:bg-gold-600 text-white font-semibold shadow-lg rounded-lg"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              搜索
+            </Button>
+            <Button
+              type="button"
+              onClick={handleInquiry}
+              className="h-12 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-lg rounded-lg"
+            >
               <FileText className="h-4 w-4 mr-2" />
               发布采购询盘
             </Button>
-          </div>
+          </form>
 
           {/* Hot search tags */}
           <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
@@ -48,7 +82,8 @@ export function ProductLobbyHero() {
             {hotSearchTags.map((tag) => (
               <button
                 key={tag}
-                className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-full text-brand-50 transition-colors"
+                onClick={() => handleTagClick(tag)}
+                className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-full text-brand-50 transition-colors cursor-pointer"
               >
                 {tag}
               </button>

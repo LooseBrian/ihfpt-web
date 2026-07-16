@@ -8,17 +8,20 @@ import {
   ChevronRight,
   Store,
   ShieldCheck,
-  Pause,
-  Play,
+  Ban,
+  Unlock,
   ExternalLink,
   Users2,
+  X,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AdminGuard, useAdminAuth } from "@/lib/admin-auth-context";
+import { AdminGuard } from "@/components/admin/AdminGuard";
+import { useAdminAuth } from "@/lib/admin-auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -42,6 +45,15 @@ interface AdminSupplier {
   status: SupplierStatus;
   registerTime: string;
   storeId: string;
+}
+
+// Ban information for a supplier
+interface BanInfo {
+  supplierId: string;
+  duration: number; // days, 0 = permanent
+  bannedAt: string; // ISO string
+  bannedUntil: string | null; // ISO string, null = permanent
+  reason: string;
 }
 
 // ===== Seed Data =====
@@ -167,11 +179,6 @@ const tierConfig: Record<SupplierTier, { label: string; className: string }> = {
   certified: { label: "认证级", className: "bg-muted text-muted-foreground" },
 };
 
-const statusConfig: Record<SupplierStatus, { label: string; className: string }> = {
-  active: { label: "正常", className: "bg-brand-100 text-brand-700" },
-  suspended: { label: "暂停", className: "bg-red-100 text-red-700" },
-};
-
 const tierOptions = [
   { value: "all", label: "全部等级" },
   { value: "S", label: "S级" },
@@ -182,17 +189,33 @@ const tierOptions = [
 const statusOptions = [
   { value: "all", label: "全部状态" },
   { value: "active", label: "正常" },
-  { value: "suspended", label: "暂停" },
+  { value: "suspended", label: "已禁止" },
+];
+
+// Ban duration options (days, 0 = permanent)
+const banDurationOptions = [
+  { value: 1, label: "禁止1天" },
+  { value: 3, label: "禁止3天" },
+  { value: 7, label: "禁止7天" },
+  { value: 0, label: "永久禁止" },
 ];
 
 const PAGE_SIZE = 5;
+
+// Calculate remaining ban days; returns null if permanent, -1 if expired
+function getRemainingDays(bannedUntil: string | null): number {
+  if (!bannedUntil) return 0; // permanent
+  const ms = new Date(bannedUntil).getTime() - Date.now();
+  if (ms <= 0) return -1;
+  return Math.ceil(ms / (24 * 60 * 60 * 1000));
+}
 
 // ===== Page Component =====
 
 export default function SupplierManagementPage() {
   return (
     <AdminLayout>
-      <AdminGuard permission="suppliers.view">
+      <AdminGuard requiredPermission="suppliers.suspend">
         <SupplierManagementContent />
       </AdminGuard>
     </AdminLayout>
@@ -207,6 +230,27 @@ function SupplierManagementContent() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Ban state: keyed by supplier id
+  const [banInfo, setBanInfo] = useState<Record<string, BanInfo>>(() => {
+    const now = new Date().toISOString();
+    const init: Record<string, BanInfo> = {};
+    for (const s of seedSuppliers) {
+      if (s.status === "suspended") {
+        init[s.id] = {
+          supplierId: s.id,
+          duration: 0,
+          bannedAt: now,
+          bannedUntil: null,
+          reason: "历史暂停记录",
+        };
+      }
+    }
+    return init;
+  });
+  const [banTarget, setBanTarget] = useState<AdminSupplier | null>(null);
+  const [banDuration, setBanDuration] = useState<number>(1);
+  const [banReason, setBanReason] = useState("");
+
   // Stats
   const stats = useMemo(() => {
     const total = suppliers.length;
@@ -217,6 +261,13 @@ function SupplierManagementContent() {
   }, [suppliers]);
 
   // Filter
+  const getActiveBan = (id: string): BanInfo | null => {
+    const info = banInfo[id];
+    if (!info) return null;
+    if (getRemainingDays(info.bannedUntil) === -1) return null; // expired
+    return info;
+  };
+
   const filtered = useMemo(() => {
     let result = [...suppliers];
     if (search.trim()) {
@@ -227,26 +278,72 @@ function SupplierManagementContent() {
       result = result.filter((s) => s.tier === tierFilter);
     }
     if (statusFilter !== "all") {
-      result = result.filter((s) => s.status === statusFilter);
+      result = result.filter((s) =>
+        statusFilter === "suspended"
+          ? !!getActiveBan(s.id)
+          : !getActiveBan(s.id)
+      );
     }
     return result;
-  }, [suppliers, search, tierFilter, statusFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suppliers, search, tierFilter, statusFilter, banInfo]);
 
   // Pagination
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
   const pageData = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
   );
 
-  const handleToggleStatus = (id: string) => {
+  const openBanDialog = (supplier: AdminSupplier) => {
+    setBanTarget(supplier);
+    setBanDuration(1);
+    setBanReason("");
+  };
+
+  const handleBanConfirm = () => {
+    if (!banTarget) return;
+    const now = new Date();
+    const bannedAt = now.toISOString();
+    const bannedUntil =
+      banDuration === 0
+        ? null
+        : new Date(now.getTime() + banDuration * 24 * 60 * 60 * 1000).toISOString();
+    setBanInfo((prev) => ({
+      ...prev,
+      [banTarget.id]: {
+        supplierId: banTarget.id,
+        duration: banDuration,
+        bannedAt,
+        bannedUntil,
+        reason: banReason || "未填写原因",
+      },
+    }));
     setSuppliers((prev) =>
       prev.map((s) =>
-        s.id === id
-          ? { ...s, status: s.status === "active" ? "suspended" : "active" }
-          : s
+        s.id === banTarget.id ? { ...s, status: "suspended" } : s
       )
     );
+    setBanTarget(null);
+    setBanReason("");
+    alert(
+      banDuration === 0
+        ? "已永久禁止该供应商"
+        : `已禁止该供应商 ${banDuration} 天`
+    );
+  };
+
+  const handleUnban = (id: string) => {
+    setBanInfo((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setSuppliers((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status: "active" } : s))
+    );
+    alert("已解除禁止");
   };
 
   const resetFilters = () => {
@@ -387,7 +484,10 @@ function SupplierManagementContent() {
               ) : (
                 pageData.map((supplier) => {
                   const tc = tierConfig[supplier.tier];
-                  const sc = statusConfig[supplier.status];
+                  const activeBan = getActiveBan(supplier.id);
+                  const remaining = activeBan
+                    ? getRemainingDays(activeBan.bannedUntil)
+                    : null;
                   return (
                     <tr key={supplier.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
                       {/* Name */}
@@ -419,7 +519,20 @@ function SupplierManagementContent() {
                       </td>
                       {/* Status */}
                       <td className="px-4 py-3">
-                        <Badge className={sc.className}>{sc.label}</Badge>
+                        {activeBan ? (
+                          <div className="flex flex-col gap-1">
+                            <Badge className="bg-red-100 text-red-700">
+                              {remaining === 0
+                                ? "永久禁止"
+                                : `已禁止 (剩余 ${remaining}天)`}
+                            </Badge>
+                            <span className="text-xs text-slate-400">
+                              原因：{activeBan.reason}
+                            </span>
+                          </div>
+                        ) : (
+                          <Badge className="bg-brand-100 text-brand-700">正常</Badge>
+                        )}
                       </td>
                       {/* Register Time */}
                       <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{supplier.registerTime}</td>
@@ -432,26 +545,28 @@ function SupplierManagementContent() {
                               资质审核
                             </Button>
                           )}
-                          {hasPermission("suppliers.suspend") && (
-                            <Button
-                              size="sm"
-                              variant={supplier.status === "active" ? "destructive" : "outline"}
-                              className="gap-1"
-                              onClick={() => handleToggleStatus(supplier.id)}
-                            >
-                              {supplier.status === "active" ? (
-                                <>
-                                  <Pause className="h-3.5 w-3.5" />
-                                  暂停
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="h-3.5 w-3.5" />
-                                  恢复
-                                </>
-                              )}
-                            </Button>
-                          )}
+                          {hasPermission("suppliers.suspend") &&
+                            (activeBan ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1"
+                                onClick={() => handleUnban(supplier.id)}
+                              >
+                                <Unlock className="h-3.5 w-3.5" />
+                                解除禁止
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="gap-1"
+                                onClick={() => openBanDialog(supplier)}
+                              >
+                                <Ban className="h-3.5 w-3.5" />
+                                停用
+                              </Button>
+                            ))}
                         </div>
                       </td>
                     </tr>
@@ -471,7 +586,7 @@ function SupplierManagementContent() {
             <Button
               variant="outline"
               size="icon-sm"
-              disabled={currentPage === 1}
+              disabled={safePage === 1}
               onClick={() => setCurrentPage((p) => p - 1)}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -481,7 +596,7 @@ function SupplierManagementContent() {
                 key={page}
                 onClick={() => setCurrentPage(page)}
                 className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
-                  currentPage === page
+                  safePage === page
                     ? "bg-brand-600 text-white font-medium"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
@@ -492,7 +607,7 @@ function SupplierManagementContent() {
             <Button
               variant="outline"
               size="icon-sm"
-              disabled={currentPage === totalPages || totalPages === 0}
+              disabled={safePage >= totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
             >
               <ChevronRight className="h-4 w-4" />
@@ -500,6 +615,76 @@ function SupplierManagementContent() {
           </div>
         </div>
       </div>
+
+      {/* Ban Dialog */}
+      {banTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setBanTarget(null)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                <Ban className="h-4 w-4 text-red-600" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">
+                禁止供应商
+              </h3>
+            </div>
+            <p className="text-sm text-slate-500 mb-1">
+              企业：
+              <span className="font-medium text-slate-700">
+                {banTarget.name}
+              </span>
+            </p>
+            <p className="text-sm text-slate-500 mb-3">
+              等级：
+              <span className="text-slate-700">
+                {tierConfig[banTarget.tier].label}
+              </span>
+            </p>
+            <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+              禁止时长 <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {banDurationOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setBanDuration(opt.value)}
+                  className={`h-9 rounded-md text-sm border transition-colors ${
+                    banDuration === opt.value
+                      ? "bg-red-600 border-red-600 text-white"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+              禁止原因
+            </label>
+            <Textarea
+              placeholder="请输入禁止原因（选填）"
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+              rows={3}
+              className="resize-none"
+            />
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={() => setBanTarget(null)}>
+                取消
+              </Button>
+              <Button size="sm" variant="destructive" onClick={handleBanConfirm}>
+                <X className="h-3.5 w-3.5" />
+                确认禁止
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

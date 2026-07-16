@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,6 +49,9 @@ import type { UploadedImage, UploadedVideo } from "@/components/product/MediaUpl
 import { TopBar } from "@/components/layout/TopBar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { useAuth } from "@/lib/auth-context";
+import { useProducts } from "@/lib/product-context";
+import { hasSensitiveContent, checkSensitive } from "@/lib/sensitive-words";
 
 // ===== Static data =====
 
@@ -103,6 +106,11 @@ interface Keyword {
 
 export default function NewProductPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const { addProduct, updateProduct, getProductById } = useProducts();
+  const editId = searchParams.get("edit");
+  const isEditing = !!editId;
 
   // ===== Form state =====
   // Section 1: Basic Info
@@ -158,6 +166,80 @@ export default function NewProductPage() {
   // Submit
   const [submitting, setSubmitting] = useState(false);
 
+  // ===== Load product for edit mode =====
+  useEffect(() => {
+    if (editId) {
+      const product = getProductById(editId);
+      if (product) {
+        // Prefill form fields from loaded product data
+        setName(product.name || "");
+        setNameEn(product.nameEn || "");
+        setKeywords(
+          (product.keywords || []).map((text, idx) => ({ id: `kw-${idx}`, text }))
+        );
+        setCategory(product.category || "");
+        setSubcategory(product.subcategory || "");
+        setBrand(product.brand || "");
+        setModel(product.model || "");
+        setOrigin(product.origin || "");
+        setDescription(product.description || "");
+        setSpec(product.spec || "");
+        setCertBody(product.certBody || "");
+        setCertNumber(product.certNumber || "");
+        setSelectedRegions(product.exportRegions || []);
+        setSelectedServices(product.services || []);
+
+        // Parse price range (format: "CURRENCY MIN - MAX / UNIT")
+        const priceMatch = (product.priceRange || "").match(
+          /^(\S+)\s+(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*\/\s*(\S+)$/
+        );
+        if (priceMatch) {
+          const [, cur, min, max, unit] = priceMatch;
+          setPriceMin(min);
+          setPriceMax(max);
+          const matchedCurrency = currencies.find((c) => c.startsWith(cur));
+          setCurrency(matchedCurrency || "CNY (¥)");
+          setPriceUnit(unit);
+        }
+
+        // Parse MOQ (format: "QTY UNIT")
+        const moqMatch = (product.moq || "").match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
+        if (moqMatch) {
+          const [, qty, unit] = moqMatch;
+          setMoq(qty);
+          setMoqUnit(unit);
+        }
+
+        // Load images
+        if (product.images && product.images.length > 0) {
+          setImages(
+            product.images.map((url, idx) => ({
+              id: `img-${idx}`,
+              url,
+              size: 0,
+              isMain: idx === 0,
+            }))
+          );
+        }
+
+        // Load videos
+        if (product.videos && product.videos.length > 0) {
+          setVideos(
+            product.videos.map((v, idx) => ({
+              id: `vid-${idx}`,
+              url: v.url,
+              thumbnail: v.thumbnail,
+              duration: v.duration ? Number(v.duration) || undefined : undefined,
+              title: v.title,
+              size: 0,
+            }))
+          );
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, getProductById]);
+
   // ===== Derived values =====
   const selectedCategory = categories.find((c) => c.value === category);
   const priceRange = priceMin && priceMax ? `${priceMin} - ${priceMax}` : priceMin || "";
@@ -204,33 +286,62 @@ export default function NewProductPage() {
   };
 
   const handleSubmit = (action: "draft" | "submit") => {
+    // Sensitive word check on description
+    if (description && hasSensitiveContent(description)) {
+      const matches = checkSensitive(description);
+      const wordsList = matches.map((m) => m.word).join("、");
+      alert(`检测到敏感内容，请修改后重新提交：\n${wordsList}`);
+      return;
+    }
+
     setSubmitting(true);
     setTimeout(() => {
       setSubmitting(false);
 
-      // Build product item for localStorage
-      const newProduct = {
-        id: `SKU-2026-${String(Date.now()).slice(-4)}`,
+      const priceRangeStr = priceRange ? `${currency.split(" ")[0]} ${priceRange} / ${priceUnit}` : "面议";
+      const moqStr = moq ? `${moq} ${moqUnit}` : "面议";
+
+      const productData = {
         name: name || "未命名产品",
-        category: category || "未分类",
-        price: priceRange ? `${currency.split(" ")[0]} ${priceRange} / ${priceUnit}` : "面议",
-        moq: moq ? `${moq} ${moqUnit}` : "面议",
-        status: action === "submit" ? "pending" : "draft",
-        statusText: action === "submit" ? "审核中" : "草稿",
+        nameEn,
+        spec: spec || "",
+        moq: moqStr,
+        priceRange: priceRangeStr,
+        supplier: user?.name || "未知供应商",
+        certType: certBody || "",
         image: images[0]?.url || "https://loremflickr.com/120/80/food,halal",
+        images: images.map((img) => img.url),
+        videos: videos.map((v) => ({
+          url: v.url,
+          thumbnail: v.thumbnail,
+          duration: v.duration?.toString(),
+          title: v.title,
+        })),
+        category: category || "未分类",
+        subcategory,
+        brand,
+        model,
+        origin,
+        description,
+        keywords: keywords.map((k) => k.text),
+        certBody,
+        certNumber,
         imageCount: images.length,
         videoCount: videos.length,
-        updatedAt: new Date().toISOString(),
+        exportRegions: selectedRegions,
+        services: selectedServices,
       };
 
-      // Save to localStorage so SupplierProducts can pick it up
-      try {
-        const stored = localStorage.getItem("ihf_new_products");
-        const existing: typeof newProduct[] = stored ? JSON.parse(stored) : [];
-        existing.unshift(newProduct);
-        localStorage.setItem("ihf_new_products", JSON.stringify(existing));
-      } catch {
-        // ignore storage errors
+      if (isEditing && editId) {
+        updateProduct(editId, {
+          ...productData,
+          status: action === "submit" ? "pending" : "draft",
+        });
+      } else {
+        const newId = addProduct(productData);
+        if (action === "draft") {
+          updateProduct(newId, { status: "draft" });
+        }
       }
 
       if (action === "submit") {
@@ -275,7 +386,7 @@ export default function NewProductPage() {
               产品管理
             </button>
             <ChevronRight className="h-4 w-4" />
-            <span className="text-brand-600 font-medium">发布新产品</span>
+            <span className="text-brand-600 font-medium">{isEditing ? "编辑产品" : "发布新产品"}</span>
           </div>
 
           {/* Page header with quality score */}
@@ -283,10 +394,12 @@ export default function NewProductPage() {
             <div>
               <h1 className="text-2xl font-bold text-brand-900 flex items-center gap-2">
                 <Package className="h-6 w-6 text-brand-600" />
-                发布新产品
+                {isEditing ? "编辑产品" : "发布新产品"}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                填写完整信息可提高搜索排名与询盘转化率，提交后平台 3-5 个工作日完成审核
+                {isEditing
+                  ? "修改产品信息后重新提交，平台将重新审核"
+                  : "填写完整信息可提高搜索排名与询盘转化率，提交后平台 3-5 个工作日完成审核"}
               </p>
             </div>
             {/* Quality score badge */}

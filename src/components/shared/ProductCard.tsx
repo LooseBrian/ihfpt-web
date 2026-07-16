@@ -5,9 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ArrowRight } from "lucide-react";
+import { MessageSquare, ArrowRight, Heart } from "lucide-react";
 import type { Product } from "@/lib/data";
 import { InquiryDialog } from "@/components/inquiry/InquiryDialog";
+import { useFavorites } from "@/lib/favorites-context";
+import { useAuth } from "@/lib/auth-context";
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +18,22 @@ interface ProductCardProps {
 
 export function ProductCard({ product, linkable = false }: ProductCardProps) {
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const { toggleProductFavorite, isFavorited } = useFavorites();
+  const { user } = useAuth();
+
+  const favorited = isFavorited(product.id);
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleProductFavorite({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      supplier: product.supplier,
+      priceRange: product.priceRange,
+    });
+  };
 
   const handleInquiryClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -43,6 +61,22 @@ export function ProductCard({ product, linkable = false }: ProductCardProps) {
         <Badge className="absolute top-3 left-3 bg-brand-600 hover:bg-brand-700 text-white">
           {product.certType}
         </Badge>
+        {user?.type === "buyer" && (
+          <button
+            type="button"
+            onClick={handleFavoriteClick}
+            aria-label={favorited ? "取消收藏" : "收藏产品"}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors"
+          >
+            <Heart
+              className={`h-4 w-4 ${
+                favorited
+                  ? "fill-red-500 text-red-500"
+                  : "fill-none text-white"
+              }`}
+            />
+          </button>
+        )}
         {linkable && (
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center pointer-events-none">
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white text-sm font-medium bg-brand-700/90 px-4 py-2 rounded-lg flex items-center gap-1">

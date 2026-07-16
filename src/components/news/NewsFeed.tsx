@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TrendingUp, Calendar, Building2, Newspaper } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { newsArticles, type NewsArticle } from "@/lib/data";
@@ -101,11 +101,45 @@ function NewsCard({ article }: { article: NewsArticle }) {
 
 export function NewsFeed() {
   const [activeCategory, setActiveCategory] = useState("全部");
+  const [allArticles, setAllArticles] = useState<NewsArticle[]>(newsArticles);
+
+  // Load admin-published news from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("ihf_news");
+      if (stored) {
+        const adminArticles = JSON.parse(stored);
+        if (Array.isArray(adminArticles)) {
+          // Convert admin format to NewsArticle format, only published & non-deleted
+          const converted: NewsArticle[] = adminArticles
+            .filter((a: { status?: string; isDeleted?: boolean }) => a.status === "published" && !a.isDeleted)
+            .map((a: { id: string; title: string; excerpt: string; category: string; source: string; publishedAt?: string; content?: string }) => ({
+              id: a.id,
+              title: a.title,
+              excerpt: a.excerpt || (a.content ? a.content.slice(0, 100) + "..." : ""),
+              date: a.publishedAt || new Date().toISOString().split("T")[0],
+              category: a.category as NewsArticle["category"],
+              source: a.source || "IHF 平台",
+              sourceType: "official" as const,
+            }));
+
+          // Merge: admin articles first, then seed articles that don't duplicate by title
+          if (converted.length > 0) {
+            const existingTitles = new Set(converted.map((a) => a.title));
+            const nonDupSeeds = newsArticles.filter((a) => !existingTitles.has(a.title));
+            setAllArticles([...converted, ...nonDupSeeds]);
+          }
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
 
   const filteredArticles =
     activeCategory === "全部"
-      ? newsArticles
-      : newsArticles.filter((a) => a.category === activeCategory);
+      ? allArticles
+      : allArticles.filter((a) => a.category === activeCategory);
 
   return (
     <section className="py-14">
@@ -134,8 +168,8 @@ export function NewsFeed() {
                 }`}
               >
                 {cat === "全部"
-                  ? newsArticles.length
-                  : newsArticles.filter((a) => a.category === cat).length}
+                  ? allArticles.length
+                  : allArticles.filter((a) => a.category === cat).length}
               </span>
             </button>
           ))}

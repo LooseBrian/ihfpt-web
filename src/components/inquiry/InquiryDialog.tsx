@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useInquiry } from "@/lib/inquiry-context";
+import { hasSensitiveContent } from "@/lib/sensitive-words";
 
 interface InquiryDialogProps {
   open: boolean;
@@ -72,6 +73,12 @@ export function InquiryDialog({ open, onClose, product }: InquiryDialogProps) {
     e.preventDefault();
     if (!isBuyer || !user) return;
     if (!message.trim()) return;
+
+    // Sensitive word check on inquiry content
+    if (hasSensitiveContent(message) || hasSensitiveContent(subject)) {
+      alert("检测到敏感内容，请修改后重新提交");
+      return;
+    }
 
     const id = createInquiry({
       productId: product.id,
