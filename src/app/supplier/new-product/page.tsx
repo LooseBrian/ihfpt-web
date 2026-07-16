@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +104,7 @@ interface Keyword {
   text: string;
 }
 
-export default function NewProductPage() {
+function NewProductPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -1105,5 +1105,19 @@ export default function NewProductPage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function NewProductPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+          加载中...
+        </div>
+      }
+    >
+      <NewProductPageContent />
+    </Suspense>
   );
 }
