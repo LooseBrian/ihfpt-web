@@ -13,17 +13,16 @@ import {
   MessageSquare,
   TrendingUp,
   X,
-  Loader2,
   ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { SectionHeader } from "@/components/shared/SectionHeader";
 import { useInquiry } from "@/lib/inquiry-context";
 import type { Inquiry } from "@/lib/inquiry-context";
 
 // ===== Seed public inquiries (browseable by all visitors) =====
+// Images use local static assets from /public/media/ to ensure image-text match
 
 interface PublicInquiry {
   id: string;
@@ -49,7 +48,7 @@ const seedPublicInquiries: PublicInquiry[] = [
   {
     id: "PUB-INQ-001",
     productName: "清真冷冻羊腿肉（分割）",
-    productImage: "https://loremflickr.com/200/200/meat,lamb",
+    productImage: "/media/product-lamb-skewers.jpg",
     productSpec: "10kg/箱 · 分割肉",
     category: "牛羊肉制品",
     quantity: "500",
@@ -67,8 +66,8 @@ const seedPublicInquiries: PublicInquiry[] = [
   },
   {
     id: "PUB-INQ-002",
-    productName: "清真预制菜 — 咖喱牛肉",
-    productImage: "https://loremflickr.com/200/200/curry,beef",
+    productName: "清真咖喱牛肉酱",
+    productImage: "/media/product-curry-sauce.jpg",
     productSpec: "500g/盒",
     category: "清真预制菜",
     quantity: "2000",
@@ -82,12 +81,12 @@ const seedPublicInquiries: PublicInquiry[] = [
     createdAt: "2026-07-13T14:00:00.000Z",
     budget: "¥90,000 - ¥110,000",
     certRequired: "ESMA",
-    description: "采购2000盒清真咖喱牛肉预制菜，出口至利雅得，需ESMA认证",
+    description: "采购2000盒清真咖喱牛肉酱，出口至利雅得，需ESMA认证",
   },
   {
     id: "PUB-INQ-003",
-    productName: "清真速冻烤鸡翅",
-    productImage: "https://loremflickr.com/200/200/chicken,wings",
+    productName: "清真牛肉丸",
+    productImage: "/media/product-beef-meatballs.jpg",
     productSpec: "1kg/袋",
     category: "速冻调理品",
     quantity: "800",
@@ -101,12 +100,12 @@ const seedPublicInquiries: PublicInquiry[] = [
     createdAt: "2026-07-12T08:00:00.000Z",
     budget: "¥25,000 - ¥30,000",
     certRequired: "ESMA",
-    description: "800kg清真烤鸡翅，需含冷链运输报价，交货期15天内",
+    description: "800kg清真牛肉丸，需含冷链运输报价，交货期15天内",
   },
   {
     id: "PUB-INQ-004",
-    productName: "清真复合调味料 — 孜然粉",
-    productImage: "https://loremflickr.com/200/200/spice,cumin",
+    productName: "清真辣椒酱",
+    productImage: "/media/product-chili-sauce.jpg",
     productSpec: "500g/瓶",
     category: "调味料",
     quantity: "1000",
@@ -120,12 +119,12 @@ const seedPublicInquiries: PublicInquiry[] = [
     createdAt: "2026-07-11T10:30:00.000Z",
     budget: "¥18,000 - ¥25,000",
     certRequired: "MUI",
-    description: "1吨清真复合孜然粉，出口开罗，需MUI认证，包装500g/瓶",
+    description: "1吨清真辣椒酱，出口开罗，需MUI认证，包装500g/瓶",
   },
   {
     id: "PUB-INQ-005",
     productName: "清真速冻饺子 — 牛肉洋葱",
-    productImage: "https://loremflickr.com/200/200/dumpling,beef",
+    productImage: "/media/product-frozen-dumplings.jpg",
     productSpec: "30个/袋",
     category: "速冻面点",
     quantity: "5000",
@@ -143,8 +142,8 @@ const seedPublicInquiries: PublicInquiry[] = [
   },
   {
     id: "PUB-INQ-006",
-    productName: "清真即食休闲零食 — 牛肉干",
-    productImage: "https://loremflickr.com/200/200/beef,jerky",
+    productName: "清真即食汤",
+    productImage: "/media/product-instant-soup.jpg",
     productSpec: "100g/袋",
     category: "即食食品",
     quantity: "10000",
@@ -158,14 +157,14 @@ const seedPublicInquiries: PublicInquiry[] = [
     createdAt: "2026-07-09T11:00:00.000Z",
     budget: "¥80,000 - ¥100,000",
     certRequired: "JAKIM",
-    description: "1万袋清真牛肉干休闲零食，多哈进口，需JAKIM认证",
+    description: "1万袋清真即食汤，多哈进口，需JAKIM认证",
   },
   {
     id: "PUB-INQ-007",
-    productName: "清真冷冻虾仁",
-    productImage: "https://loremflickr.com/200/200/shrimp,frozen",
+    productName: "有机清真大米",
+    productImage: "/media/product-organic-rice.jpg",
     productSpec: "2kg/盒",
-    category: "水产品",
+    category: "粮油副食",
     quantity: "600",
     unit: "kg",
     targetMarket: "科威特",
@@ -177,16 +176,16 @@ const seedPublicInquiries: PublicInquiry[] = [
     createdAt: "2026-07-08T09:00:00.000Z",
     budget: "¥50,000 - ¥72,000",
     certRequired: "JAKIM",
-    description: "600kg清真冷冻虾仁，出口科威特城，需冷链运输",
+    description: "600kg有机清真大米，出口科威特城，需冷链运输",
   },
   {
     id: "PUB-INQ-008",
-    productName: "清真植物油 — 食用调和油",
-    productImage: "https://loremflickr.com/200/200/oil,cooking",
-    productSpec: "5L/桶",
-    category: "粮油副食",
+    productName: "清真芝麻烧饼",
+    productImage: "/media/product-sesame-bread.jpg",
+    productSpec: "10个/袋",
+    category: "清真预制菜",
     quantity: "2000",
-    unit: "桶",
+    unit: "袋",
     targetMarket: "巴基斯坦",
     buyerName: "Karachi Foods Ltd",
     buyerCountry: "巴基斯坦",
@@ -196,7 +195,7 @@ const seedPublicInquiries: PublicInquiry[] = [
     createdAt: "2026-07-07T13:00:00.000Z",
     budget: "¥60,000 - ¥80,000",
     certRequired: "HCA",
-    description: "2000桶5L装清真食用调和油，出口卡拉奇",
+    description: "2000袋清真芝麻烧饼，出口卡拉奇",
   },
 ];
 
@@ -209,7 +208,7 @@ const statusConfig = {
   closed: { label: "已关闭", color: "bg-gray-50 text-gray-500 border-gray-200", dot: "bg-gray-400" },
 };
 
-const categoryOptions = ["全部品类", "牛羊肉制品", "清真预制菜", "速冻调理品", "速冻面点", "调味料", "即食食品", "水产品", "粮油副食"];
+const categoryOptions = ["全部品类", "牛羊肉制品", "清真预制菜", "速冻调理品", "速冻面点", "调味料", "即食食品", "粮油副食"];
 const marketOptions = ["全部市场", "马来西亚", "沙特阿拉伯", "阿联酋", "新加坡", "卡塔尔", "科威特", "巴基斯坦", "埃及"];
 const statusOptions = ["全部状态", "招标中", "即将截止", "已报价"];
 
@@ -222,6 +221,12 @@ function formatDate(iso: string): string {
   if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
+
+// ===== Constants for consistent card sizing =====
+
+const CARD_WIDTH = 300; // px - uniform width for all cards
+const CARD_IMAGE_HEIGHT = 120; // px - fixed image area
+const CARD_TOTAL_HEIGHT = 380; // px - fixed total card height
 
 // ===== Main Component =====
 
@@ -280,7 +285,7 @@ export function InquiryBrowseSection() {
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
-      const amount = 340;
+      const amount = CARD_WIDTH + 16; // card width + gap
       scrollRef.current.scrollBy({
         left: direction === "left" ? -amount : amount,
         behavior: "smooth",
@@ -289,7 +294,6 @@ export function InquiryBrowseSection() {
   };
 
   const handleQuote = (inquiry: PublicInquiry) => {
-    // Navigate to the product detail or inquiry page
     router.push(`/products?q=${encodeURIComponent(inquiry.productName)}`);
   };
 
@@ -421,39 +425,43 @@ export function InquiryBrowseSection() {
             className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth"
             style={{ scrollbarWidth: "thin", scrollbarColor: "#cbd5e1 #f1f5f9" }}
           >
-            {/* Stats summary card */}
-            <div className="snap-start shrink-0 w-[280px] bg-gradient-to-br from-brand-900 to-brand-700 rounded-2xl p-5 text-white flex flex-col justify-between">
-              <div>
-                <TrendingUp className="h-8 w-8 text-gold-400 mb-3" />
-                <h3 className="text-lg font-bold mb-2">实时采购需求</h3>
-                <p className="text-sm text-brand-200">
+            {/* Stats summary card - same dimensions as inquiry cards */}
+            <div
+              className="snap-start shrink-0 bg-gradient-to-br from-brand-900 to-brand-700 rounded-2xl p-4 text-white flex flex-col"
+              style={{ width: `${CARD_WIDTH}px`, height: `${CARD_TOTAL_HEIGHT}px` }}
+            >
+              <div className="flex-1 flex flex-col justify-center">
+                <TrendingUp className="h-7 w-7 text-gold-400 mb-2" />
+                <h3 className="text-base font-bold mb-1.5 line-clamp-1">实时采购需求</h3>
+                <p className="text-xs text-brand-200 line-clamp-2 leading-relaxed">
                   全球采购商正在寻找清真食品供应商，立即报价获取订单
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/20">
                 <div>
-                  <div className="text-2xl font-bold text-gold-400">{filteredInquiries.length}</div>
-                  <div className="text-xs text-brand-200">活跃询盘</div>
+                  <div className="text-xl font-bold text-gold-400">{filteredInquiries.length}</div>
+                  <div className="text-[10px] text-brand-200">活跃询盘</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-gold-400">
+                  <div className="text-xl font-bold text-gold-400">
                     {filteredInquiries.reduce((sum, i) => sum + i.quotesCount, 0)}
                   </div>
-                  <div className="text-xs text-brand-200">已报价数</div>
+                  <div className="text-[10px] text-brand-200">已报价数</div>
                 </div>
               </div>
             </div>
 
-            {/* Inquiry cards */}
+            {/* Inquiry cards - all identical dimensions */}
             {filteredInquiries.map((inquiry) => {
               const status = statusConfig[inquiry.status];
               return (
                 <div
                   key={inquiry.id}
-                  className="snap-start shrink-0 w-[320px] bg-white rounded-2xl border overflow-hidden hover:shadow-lg hover:border-brand-200 transition-all group"
+                  className="snap-start shrink-0 bg-white rounded-2xl border overflow-hidden hover:shadow-lg hover:border-brand-200 transition-all group flex flex-col"
+                  style={{ width: `${CARD_WIDTH}px`, height: `${CARD_TOTAL_HEIGHT}px` }}
                 >
-                  {/* Product image + status */}
-                  <div className="relative h-32 overflow-hidden">
+                  {/* Product image - fixed height */}
+                  <div className="relative shrink-0 overflow-hidden" style={{ height: `${CARD_IMAGE_HEIGHT}px` }}>
                     <img
                       src={inquiry.productImage}
                       alt={inquiry.productName}
@@ -470,46 +478,44 @@ export function InquiryBrowseSection() {
                     </div>
                   </div>
 
-                  {/* Card content */}
-                  <div className="p-4">
-                    {/* Product name */}
-                    <h3 className="font-semibold text-sm text-foreground line-clamp-1 mb-1">
+                  {/* Card content - flex-1 fills remaining space */}
+                  <div className="p-3 flex flex-col flex-1 min-h-0">
+                    {/* Product name - single line, truncate */}
+                    <h3 className="font-semibold text-sm text-foreground line-clamp-1 mb-0.5">
                       {inquiry.productName}
                     </h3>
-                    <p className="text-xs text-muted-foreground mb-2">{inquiry.productSpec}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{inquiry.productSpec}</p>
 
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      <Badge variant="secondary" className="text-[10px] py-0">
+                    {/* Tags - fixed single row */}
+                    <div className="flex items-center gap-1 mb-2 min-h-[20px]">
+                      <Badge variant="secondary" className="text-[10px] py-0 shrink-0">
                         <Package className="h-2.5 w-2.5 mr-0.5" />
                         {inquiry.quantity} {inquiry.unit}
                       </Badge>
-                      <Badge variant="secondary" className="text-[10px] py-0">
+                      <Badge variant="secondary" className="text-[10px] py-0 shrink-0">
                         <MapPin className="h-2.5 w-2.5 mr-0.5" />
                         {inquiry.targetMarket}
                       </Badge>
                       {inquiry.certRequired && (
-                        <Badge className="text-[10px] py-0 bg-brand-50 text-brand-700">
+                        <Badge className="text-[10px] py-0 bg-brand-50 text-brand-700 shrink-0">
                           {inquiry.certRequired}
                         </Badge>
                       )}
                     </div>
 
-                    {/* Description */}
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+                    {/* Description - exactly 2 lines, fixed height */}
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed" style={{ minHeight: "32px" }}>
                       {inquiry.description}
                     </p>
 
-                    {/* Budget */}
-                    {inquiry.budget && (
-                      <div className="flex items-center justify-between text-xs mb-3 pb-3 border-b">
-                        <span className="text-muted-foreground">采购预算</span>
-                        <span className="font-bold text-brand-600">{inquiry.budget}</span>
-                      </div>
-                    )}
+                    {/* Budget - fixed height row */}
+                    <div className="flex items-center justify-between text-xs mb-2 pb-2 border-b" style={{ minHeight: "20px" }}>
+                      <span className="text-muted-foreground">采购预算</span>
+                      <span className="font-bold text-brand-600">{inquiry.budget || "面议"}</span>
+                    </div>
 
-                    {/* Buyer info */}
-                    <div className="flex items-center gap-2 mb-3">
+                    {/* Buyer info - fixed height row */}
+                    <div className="flex items-center gap-2 mb-2" style={{ minHeight: "28px" }}>
                       <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
                         <span className="text-[10px] font-bold text-brand-600">
                           {inquiry.buyerName.charAt(0)}
@@ -517,7 +523,7 @@ export function InquiryBrowseSection() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-medium truncate">{inquiry.buyerName}</div>
-                        <div className="text-[10px] text-muted-foreground">{inquiry.buyerCountry} · {inquiry.buyerLevel}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">{inquiry.buyerCountry} · {inquiry.buyerLevel}</div>
                       </div>
                       <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 shrink-0">
                         <Clock className="h-2.5 w-2.5" />
@@ -525,10 +531,10 @@ export function InquiryBrowseSection() {
                       </span>
                     </div>
 
-                    {/* Action button */}
+                    {/* Action button - pinned to bottom */}
                     <Button
                       onClick={() => handleQuote(inquiry)}
-                      className="w-full h-8 text-xs bg-brand-600 hover:bg-brand-700 text-white gap-1"
+                      className="w-full h-8 text-xs bg-brand-600 hover:bg-brand-700 text-white gap-1 mt-auto"
                     >
                       <MessageSquare className="h-3 w-3" />
                       {inquiry.status === "quoted" ? "继续报价" : "立即报价"}
