@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Search, Menu, X, Package, Store, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { navLinks } from "@/lib/data";
 import { useAuth } from "@/lib/auth-context";
 import { searchAll, hotSearchTags } from "@/lib/search";
-import { Breadcrumb } from "@/components/layout/Breadcrumb";
 
 export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -18,6 +17,7 @@ export function Navbar() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { user, isLoggedIn } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Switch hover colors based on logged-in role
@@ -25,6 +25,16 @@ export function Navbar() {
   const linkHover = isBuyer
     ? "hover:text-trust-600 hover:bg-trust-50"
     : "hover:text-brand-600 hover:bg-brand-50";
+
+  // Determine if a nav link is the current page
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    // Match segment: /products, /product/h1 both highlight 产品大厅's parent if mapped,
+    // but we only highlight exact top-level match to keep it simple and predictable.
+    // Map detail routes back to their parent nav item.
+    const topLevel = "/" + (pathname.split("/")[1] || "");
+    return href === topLevel;
+  };
 
   // Click outside to close suggestions
   useEffect(() => {
@@ -93,15 +103,31 @@ export function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className={`px-3 py-2 text-sm text-foreground ${linkHover} rounded-md transition-colors`}
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <a
+                key={link.href}
+                href={link.href}
+                className={`relative px-3 py-2 text-sm rounded-md transition-colors ${
+                  active
+                    ? isBuyer
+                      ? "text-trust-700 font-semibold"
+                      : "text-brand-700 font-semibold"
+                    : `text-foreground ${linkHover}`
+                }`}
+              >
+                {link.label}
+                {active && (
+                  <span
+                    className={`absolute -bottom-[1px] left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full ${
+                      isBuyer ? "bg-trust-600" : "bg-brand-600"
+                    }`}
+                  />
+                )}
+              </a>
+            );
+          })}
         </nav>
 
         {/* Search + Mobile Menu */}
@@ -246,15 +272,24 @@ export function Navbar() {
                   <Input placeholder="搜索..." className="pl-9" />
                 </div>
                 <nav className="flex flex-col gap-1">
-                  {navLinks.map((link) => (
-                    <a
-                      key={link.href}
-                      href={link.href}
-                      className={`px-3 py-2.5 text-sm text-foreground ${linkHover} rounded-md transition-colors`}
-                    >
-                      {link.label}
-                    </a>
-                  ))}
+                  {navLinks.map((link) => {
+                    const active = isActive(link.href);
+                    return (
+                      <a
+                        key={link.href}
+                        href={link.href}
+                        className={`px-3 py-2.5 text-sm rounded-md transition-colors ${
+                          active
+                            ? isBuyer
+                              ? "text-trust-700 font-semibold bg-trust-50"
+                              : "text-brand-700 font-semibold bg-brand-50"
+                            : `text-foreground ${linkHover}`
+                        }`}
+                      >
+                        {link.label}
+                      </a>
+                    );
+                  })}
                 </nav>
                 <div className="border-t pt-4 flex flex-col gap-2">
                   <a href="/login?tab=buyer&mode=login" className="w-full">
@@ -274,9 +309,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </div>
-
-      {/* Breadcrumb trail — auto-hidden on homepage and admin */}
-      <Breadcrumb />
     </header>
   );
 }
