@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { navLinks } from "@/lib/data";
 import { useAuth } from "@/lib/auth-context";
 import { searchAll, hotSearchTags } from "@/lib/search";
+import { Breadcrumb } from "@/components/layout/Breadcrumb";
 
 export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -273,6 +274,9 @@ export function Navbar() {
           </Sheet>
         </div>
       </div>
+
+      {/* Breadcrumb trail — auto-hidden on homepage and admin */}
+      <Breadcrumb />
     </header>
   );
 }
