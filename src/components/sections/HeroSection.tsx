@@ -72,7 +72,7 @@ export function HeroSection() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="搜索产品名、供应商、认证类型..."
-                  className="h-12 pl-11 border-0 focus-visible:ring-0 text-base"
+                  className="h-12 pl-11 border-0 focus-visible:ring-0 text-base text-foreground placeholder:text-muted-foreground"
                 />
               </div>
               <Button
