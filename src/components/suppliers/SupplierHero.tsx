@@ -36,8 +36,8 @@ export function SupplierHero() {
               />
             </div>
             <Button className="h-12 px-6 bg-gold-500 hover:bg-gold-600 text-white font-semibold shadow-lg rounded-lg">
-              <FileText className="h-4 w-4 mr-2" />
-              发布定制采购需求
+              <Search className="h-4 w-4 mr-2" />
+              搜索供应商
             </Button>
           </div>
 

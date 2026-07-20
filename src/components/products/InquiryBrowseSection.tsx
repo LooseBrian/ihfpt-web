@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useQuote } from "@/lib/quote-context";
+import { QuoteDialog, type QuoteInquiryData } from "@/components/products/QuoteDialog";
 
 // ===== Seed public inquiries (browseable by all visitors) =====
 // Images use local static assets from /public/media/ to ensure image-text match
@@ -309,6 +311,11 @@ function FilterDropdown({
 export function InquiryBrowseSection() {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { getQuoteCount } = useQuote();
+
+  // Quote dialog state
+  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<QuoteInquiryData | null>(null);
 
   // Filters
   const [filterCategory, setFilterCategory] = useState("全部品类");
@@ -396,7 +403,25 @@ export function InquiryBrowseSection() {
   };
 
   const handleQuote = (inquiry: PublicInquiry) => {
-    router.push(`/products?q=${encodeURIComponent(inquiry.productName)}`);
+    setSelectedInquiry({
+      id: inquiry.id,
+      productName: inquiry.productName,
+      productImage: inquiry.productImage,
+      productSpec: inquiry.productSpec,
+      category: inquiry.category,
+      quantity: inquiry.quantity,
+      unit: inquiry.unit,
+      targetMarket: inquiry.targetMarket,
+      buyerName: inquiry.buyerName,
+      buyerCountry: inquiry.buyerCountry,
+      buyerLevel: inquiry.buyerLevel,
+      status: inquiry.status,
+      quotesCount: inquiry.quotesCount + getQuoteCount(inquiry.id),
+      budget: inquiry.budget,
+      certRequired: inquiry.certRequired,
+      description: inquiry.description,
+    });
+    setQuoteDialogOpen(true);
   };
 
   const resetFilters = () => {
@@ -553,7 +578,7 @@ export function InquiryBrowseSection() {
                       </span>
                     </div>
                     <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">
-                      {inquiry.quotesCount} 人报价
+                      {inquiry.quotesCount + getQuoteCount(inquiry.id)} 人报价
                     </div>
                   </div>
 
@@ -613,10 +638,19 @@ export function InquiryBrowseSection() {
                     {/* Action button - pinned to bottom */}
                     <Button
                       onClick={() => handleQuote(inquiry)}
-                      className="w-full h-8 text-xs bg-brand-600 hover:bg-brand-700 text-white gap-1 mt-auto"
+                      disabled={inquiry.status === "closed"}
+                      className={`w-full h-8 text-xs gap-1 mt-auto ${
+                        inquiry.status === "closed"
+                          ? "bg-muted text-muted-foreground cursor-not-allowed"
+                          : "bg-brand-600 hover:bg-brand-700 text-white"
+                      }`}
                     >
                       <MessageSquare className="h-3 w-3" />
-                      {inquiry.status === "quoted" ? "继续报价" : "立即报价"}
+                      {inquiry.status === "closed"
+                        ? "询盘已关闭"
+                        : inquiry.status === "quoted"
+                        ? "继续报价"
+                        : "立即报价"}
                     </Button>
                   </div>
                 </div>
@@ -683,6 +717,12 @@ export function InquiryBrowseSection() {
           </div>
         )}
       </div>
+      {/* Quote dialog */}
+      <QuoteDialog
+        open={quoteDialogOpen}
+        onClose={() => setQuoteDialogOpen(false)}
+        inquiry={selectedInquiry}
+      />
     </section>
   );
 }

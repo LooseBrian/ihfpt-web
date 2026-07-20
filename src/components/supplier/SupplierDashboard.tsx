@@ -1,4 +1,4 @@
-import { Plus, Store, MessageSquare, ShieldCheck, TrendingUp, Package } from "lucide-react";
+import { Plus, Store, MessageSquare, ShieldCheck, TrendingUp, Package, FileText } from "lucide-react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 
 const quickActions = [
@@ -7,6 +7,13 @@ const quickActions = [
     title: "发布新产品",
     desc: "上传产品信息、图片与资质，上架审核",
     href: "#products",
+    color: "brand",
+  },
+  {
+    icon: FileText,
+    title: "我的报价",
+    desc: "查看向采购商提交的报价记录与状态",
+    href: "#quotes",
     color: "brand",
   },
   {

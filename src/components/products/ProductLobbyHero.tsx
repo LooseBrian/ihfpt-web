@@ -72,7 +72,7 @@ export function ProductLobbyHero() {
               className="h-12 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-lg rounded-lg"
             >
               <FileText className="h-4 w-4 mr-2" />
-              发布采购询盘
+              发布采购需求
             </Button>
           </form>
 

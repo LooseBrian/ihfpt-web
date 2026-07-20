@@ -6,6 +6,7 @@ import { SupplierHero } from "@/components/supplier/SupplierHero";
 import { SupplierDashboard } from "@/components/supplier/SupplierDashboard";
 import { SupplierProducts } from "@/components/supplier/SupplierProducts";
 import { SupplierInquiries } from "@/components/supplier/SupplierInquiries";
+import { SupplierQuotes } from "@/components/supplier/SupplierQuotes";
 import { SupplierStore } from "@/components/supplier/SupplierStore";
 import { SupplierQualifications } from "@/components/supplier/SupplierQualifications";
 import { SupplierOrders } from "@/components/supplier/SupplierOrders";
@@ -24,6 +25,7 @@ export default function SupplierPage() {
         <SupplierDashboard />
         <SupplierProducts />
         <SupplierInquiries />
+        <SupplierQuotes />
         <SupplierStore />
         <SupplierQualifications />
         <SupplierOrders />

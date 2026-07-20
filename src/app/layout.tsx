@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { InquiryProvider } from "@/lib/inquiry-context";
 import { ProductProvider } from "@/lib/product-context";
 import { FavoritesProvider } from "@/lib/favorites-context";
+import { QuoteProvider } from "@/lib/quote-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,7 +49,9 @@ export default function RootLayout({
         <AuthProvider>
           <ProductProvider>
             <FavoritesProvider>
-              <InquiryProvider>{children}</InquiryProvider>
+              <InquiryProvider>
+                <QuoteProvider>{children}</QuoteProvider>
+              </InquiryProvider>
             </FavoritesProvider>
           </ProductProvider>
         </AuthProvider>
