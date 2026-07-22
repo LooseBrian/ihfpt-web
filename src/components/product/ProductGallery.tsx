@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import Image from "next/image";
+import { SafeImage } from "@/components/shared/SafeImage";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Play, ChevronLeft, ChevronRight, X, Maximize2 } from "lucide-react";
 import type { ProductVideo } from "@/lib/data";
@@ -99,7 +99,7 @@ export function ProductGallery({
               onClick={handleVideoPlay}
               className="w-full h-full relative flex items-center justify-center"
             >
-              <Image
+              <SafeImage
                 src={currentVideo.thumbnail || currentVideo.url}
                 alt={currentVideo.title || productName}
                 fill
@@ -125,7 +125,7 @@ export function ProductGallery({
         ) : (
           // Image display
           <>
-            <Image
+            <SafeImage
               src={images[activeIndex] || images[0]}
               alt={productName}
               fill
@@ -199,7 +199,7 @@ export function ProductGallery({
                     : "border-border opacity-60 hover:opacity-100"
                 }`}
               >
-                <Image
+                <SafeImage
                   src={isVid ? thumb.thumbnail : thumb.url}
                   alt={`thumbnail-${index}`}
                   fill
@@ -229,7 +229,7 @@ export function ProductGallery({
             <X className="h-8 w-8" />
           </button>
           <div className="relative w-full max-w-4xl aspect-square" onClick={(e) => e.stopPropagation()}>
-            <Image
+            <SafeImage
               src={images[activeIndex] || images[0]}
               alt={productName}
               fill

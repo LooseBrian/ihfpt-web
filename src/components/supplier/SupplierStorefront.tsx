@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { IMAGE_PLACEHOLDER_DATAURI } from "@/lib/product-images";
 import {
   Store,
   Factory,
@@ -441,6 +442,9 @@ export function SupplierStorefront({
                         src={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.currentTarget.src = IMAGE_PLACEHOLDER_DATAURI;
+                        }}
                       />
                       {product.isHot && (
                         <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded">

@@ -1,18 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Search,
   UserCog,
   Edit,
-  Power,
+  Trash2,
   X,
   Mail,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGuard } from "@/components/admin/AdminGuard";
+import { adminApi } from "@/lib/api-client";
+import { useApiPaginated, useApiQuery, useApiMutation } from "@/lib/use-api";
+import { LoadingSpinner, ErrorDisplay, EmptyState } from "@/lib/use-api-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,111 +29,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  roleLabels,
-  roleColors,
-  type AdminRole,
-} from "@/lib/admin-auth-context";
+import { roleLabels, roleColors } from "@/lib/admin-auth-context";
 import { cn } from "@/lib/utils";
 
 // ===== Types =====
 
 interface AdminUserRow {
   id: string;
-  name: string;
   email: string;
-  role: AdminRole;
-  department: string;
-  lastLogin: string;
-  status: "active" | "disabled";
+  name: string;
+  department: string | null;
+  avatar: string | null;
+  is_active: number;
+  last_login_at: string | null;
+  created_at: string;
+  roles?: Array<{ id: string; name: string; label: string }>;
 }
 
-// ===== Constants =====
+interface Role {
+  id: string;
+  name: string;
+  label: string;
+  description: string | null;
+}
 
-const roleOptions: AdminRole[] = [
-  "super_admin",
-  "operations_manager",
-  "content_editor",
-  "auditor",
-  "viewer",
-];
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
 
-// ===== Seed data =====
+const PAGE_SIZE = 10;
 
-const seedUsers: AdminUserRow[] = [
-  {
-    id: "ADM-001",
-    name: "系统管理员",
-    email: "admin@ihf.org",
-    role: "super_admin",
-    department: "技术部",
-    lastLogin: "2026-07-14 08:30",
-    status: "active",
-  },
-  {
-    id: "ADM-002",
-    name: "运营张经理",
-    email: "ops@ihf.org",
-    role: "operations_manager",
-    department: "运营部",
-    lastLogin: "2026-07-14 09:15",
-    status: "active",
-  },
-  {
-    id: "ADM-003",
-    name: "编辑小李",
-    email: "editor@ihf.org",
-    role: "content_editor",
-    department: "内容部",
-    lastLogin: "2026-07-13 17:42",
-    status: "active",
-  },
-  {
-    id: "ADM-004",
-    name: "审核员王工",
-    email: "audit@ihf.org",
-    role: "auditor",
-    department: "审核部",
-    lastLogin: "2026-07-13 16:20",
-    status: "active",
-  },
-  {
-    id: "ADM-005",
-    name: "观察员赵老师",
-    email: "viewer@ihf.org",
-    role: "viewer",
-    department: "监督部",
-    lastLogin: "2026-07-12 11:08",
-    status: "active",
-  },
-  {
-    id: "ADM-006",
-    name: "刘总监",
-    email: "liu@ihf.org",
-    role: "operations_manager",
-    department: "运营部",
-    lastLogin: "2026-07-14 10:05",
-    status: "active",
-  },
-  {
-    id: "ADM-007",
-    name: "陈编辑",
-    email: "chen@ihf.org",
-    role: "content_editor",
-    department: "内容部",
-    lastLogin: "2026-07-10 14:30",
-    status: "disabled",
-  },
-  {
-    id: "ADM-008",
-    name: "周审核",
-    email: "zhou@ihf.org",
-    role: "auditor",
-    department: "审核部",
-    lastLogin: "2026-07-11 09:50",
-    status: "active",
-  },
-];
+// ===== Helpers =====
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return iso;
+  }
+}
 
 // ===== Page =====
 
@@ -143,43 +93,95 @@ export default function UsersPage() {
 }
 
 function UsersContent() {
-  const [users, setUsers] = useState<AdminUserRow[]>(seedUsers);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [mutationTick, setMutationTick] = useState(0);
 
   // form state
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
-  const [formRole, setFormRole] = useState<AdminRole>("viewer");
+  const [formPassword, setFormPassword] = useState("");
   const [formDepartment, setFormDepartment] = useState("");
+  const [formRoleId, setFormRoleId] = useState<string>("");
 
-  const filtered = useMemo(() => {
-    return users.filter((u) => {
-      const matchSearch =
-        !search ||
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase());
-      const matchRole = roleFilter === "all" || u.role === roleFilter;
-      return matchSearch && matchRole;
-    });
-  }, [users, search, roleFilter]);
+  // ===== Fetch roles (for form selector & filter) =====
+  const { data: rolesData } = useApiQuery(
+    () => adminApi.roles() as Promise<Role[]>,
+    { deps: [mutationTick] }
+  );
+  const roles = rolesData ?? [];
 
-  const stats = useMemo(
-    () => ({
-      total: users.length,
-      active: users.filter((u) => u.status === "active").length,
-      disabled: users.filter((u) => u.status === "disabled").length,
-    }),
-    [users]
+  // ===== Fetch admin users (paginated) =====
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    page,
+    total,
+    lastPage,
+    setPage,
+  } = useApiPaginated<AdminUserRow>(
+    (p, pp) =>
+      adminApi.adminUsers({
+        page: p,
+        per_page: pp,
+        search: debouncedSearch.trim() || undefined,
+      }) as Promise<PaginatedResponse<AdminUserRow>>,
+    PAGE_SIZE,
+    { deps: [debouncedSearch, mutationTick] }
   );
 
+  // ===== Debounce search input (400ms) and reset to page 1 =====
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search, setPage]);
+
+  // ===== Mutations =====
+  const createMutation = useApiMutation((payload: Record<string, unknown>) =>
+    adminApi.createAdminUser(payload)
+  );
+  const updateMutation = useApiMutation(
+    (params: { id: string; data: Record<string, unknown> }) =>
+      adminApi.updateAdminUser(params.id, params.data)
+  );
+  const deleteMutation = useApiMutation((id: string) =>
+    adminApi.deleteAdminUser(id)
+  );
+
+  const users = data ?? [];
+
+  // ===== Client-side role filter (backend doesn't support role filtering) =====
+  const filtered = useMemo(() => {
+    if (roleFilter === "all") return users;
+    return users.filter((u) => u.roles?.some((r) => r.id === roleFilter));
+  }, [users, roleFilter]);
+
+  // ===== Stats =====
+  const stats = useMemo(
+    () => ({
+      total,
+      active: users.filter((u) => u.is_active === 1).length,
+      disabled: users.filter((u) => u.is_active === 0).length,
+    }),
+    [users, total]
+  );
+
+  // ===== Form helpers =====
   const resetForm = () => {
     setFormName("");
     setFormEmail("");
-    setFormRole("viewer");
+    setFormPassword("");
     setFormDepartment("");
+    setFormRoleId("");
     setEditingId(null);
   };
 
@@ -192,62 +194,89 @@ function UsersContent() {
     setEditingId(user.id);
     setFormName(user.name);
     setFormEmail(user.email);
-    setFormRole(user.role);
-    setFormDepartment(user.department);
+    setFormPassword("");
+    setFormDepartment(user.department || "");
+    setFormRoleId(user.roles?.[0]?.id || "");
     setDialogOpen(true);
   };
 
-  const toggleStatus = (id: string) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? { ...u, status: u.status === "active" ? "disabled" : "active" }
-          : u
-      )
-    );
+  const refreshAll = async () => {
+    await refetch();
+    setMutationTick((t) => t + 1);
   };
 
-  const handleSubmit = () => {
+  const handleDelete = async (id: string) => {
+    if (!confirm("确定要删除该用户吗？此操作为软删除。")) return;
+    setActionLoading(id);
+    try {
+      await deleteMutation.mutate(id);
+      await refreshAll();
+      alert("用户已删除");
+    } catch (err) {
+      alert("操作失败：" + (err instanceof Error ? err.message : "未知错误"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!formName.trim()) {
       alert("请填写用户名");
       return;
     }
-    if (!formEmail.trim()) {
+    if (!editingId && !formEmail.trim()) {
       alert("请填写邮箱");
       return;
     }
-    if (editingId) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingId
-            ? {
-                ...u,
-                name: formName,
-                email: formEmail,
-                role: formRole,
-                department: formDepartment,
-              }
-            : u
-        )
-      );
-    } else {
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const newUser: AdminUserRow = {
-        id: `ADM-${String(users.length + 1).padStart(3, "0")}`,
-        name: formName,
-        email: formEmail,
-        role: formRole,
-        department: formDepartment || "未分配",
-        lastLogin: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-          now.getDate()
-        )} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
-        status: "active",
-      };
-      setUsers((prev) => [...prev, newUser]);
+    if (!editingId && !formPassword.trim()) {
+      alert("请填写密码");
+      return;
     }
-    setDialogOpen(false);
-    resetForm();
+    if (!formRoleId) {
+      alert("请选择角色");
+      return;
+    }
+
+    setActionLoading(editingId || "form");
+    try {
+      if (editingId) {
+        const updateData: Record<string, unknown> = {
+          name: formName,
+          department: formDepartment.trim() || null,
+          role_id: formRoleId,
+        };
+        if (formPassword.trim()) {
+          updateData.password = formPassword;
+        }
+        await updateMutation.mutate({ id: editingId, data: updateData });
+      } else {
+        await createMutation.mutate({
+          email: formEmail,
+          password: formPassword,
+          name: formName,
+          department: formDepartment.trim() || null,
+          avatar: null,
+          role_id: formRoleId,
+        });
+      }
+      setDialogOpen(false);
+      resetForm();
+      await refreshAll();
+      alert(editingId ? "用户已更新" : "用户已创建");
+    } catch (err) {
+      alert("操作失败：" + (err instanceof Error ? err.message : "未知错误"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Helper to get role display info for a user
+  const getUserRoleDisplay = (user: AdminUserRow) => {
+    const role = user.roles?.[0];
+    if (!role) return { label: "未分配", color: "bg-slate-100 text-slate-500" };
+    const color = roleColors[role.name] || "bg-slate-100 text-slate-600";
+    const label = roleLabels[role.name] || role.label || role.name;
+    return { label, color };
   };
 
   return (
@@ -294,16 +323,19 @@ function UsersContent() {
           <Filter className="h-4 w-4 text-slate-400" />
           <Select
             value={roleFilter}
-            onValueChange={(v) => setRoleFilter(v || "all")}
+            onValueChange={(v) => {
+              setRoleFilter(v || "all");
+              setPage(1);
+            }}
           >
             <SelectTrigger className="w-36">
               <SelectValue placeholder="角色" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部角色</SelectItem>
-              {roleOptions.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {roleLabels[r]}
+              {roles.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.label || r.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -313,103 +345,157 @@ function UsersContent() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs">
-                <th className="text-left font-medium px-4 py-3">用户名</th>
-                <th className="text-left font-medium px-4 py-3">邮箱</th>
-                <th className="text-left font-medium px-4 py-3">角色</th>
-                <th className="text-left font-medium px-4 py-3">部门</th>
-                <th className="text-left font-medium px-4 py-3">最后登录</th>
-                <th className="text-left font-medium px-4 py-3">状态</th>
-                <th className="text-right font-medium px-4 py-3">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-50/60">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shrink-0">
-                        {u.name.slice(0, 1)}
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900">{u.name}</div>
-                        <div className="text-xs text-slate-400">{u.id}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-slate-300" />
-                      {u.email}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-block px-2 py-0.5 rounded-full text-xs font-medium",
-                        roleColors[u.role]
-                      )}
-                    >
-                      {roleLabels[u.role]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{u.department}</td>
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                    {u.lastLogin}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant="secondary"
-                      className={
-                        u.status === "active"
-                          ? "bg-brand-100 text-brand-700"
-                          : "bg-slate-100 text-slate-500"
-                      }
-                    >
-                      {u.status === "active" ? "启用" : "禁用"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => openEdit(u)}
-                        title="编辑"
-                        className="text-slate-500 hover:text-brand-600"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => toggleStatus(u.id)}
-                        title={u.status === "active" ? "禁用" : "启用"}
-                        className={
-                          u.status === "active"
-                            ? "text-slate-500 hover:text-gold-600"
-                            : "text-slate-500 hover:text-brand-600"
-                        }
-                      >
-                        <Power className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
-                    暂无匹配的用户
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <LoadingSpinner text="加载用户中..." />
+        ) : error ? (
+          <ErrorDisplay error={error} onRetry={refetch} />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title={users.length === 0 ? "暂无用户" : "当前页没有匹配的用户"}
+            description={
+              users.length === 0
+                ? "还没有任何用户记录，点击新增用户创建"
+                : "尝试切换角色筛选或翻到其他页码"
+            }
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs">
+                    <th className="text-left font-medium px-4 py-3">用户名</th>
+                    <th className="text-left font-medium px-4 py-3">邮箱</th>
+                    <th className="text-left font-medium px-4 py-3">角色</th>
+                    <th className="text-left font-medium px-4 py-3">部门</th>
+                    <th className="text-left font-medium px-4 py-3">最后登录</th>
+                    <th className="text-left font-medium px-4 py-3">状态</th>
+                    <th className="text-right font-medium px-4 py-3">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((u) => {
+                    const roleDisplay = getUserRoleDisplay(u);
+                    const isLoading = actionLoading === u.id;
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/60">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shrink-0">
+                              {u.name.slice(0, 1)}
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-900">
+                                {u.name}
+                              </div>
+                              <div className="text-xs text-slate-400">{u.id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-slate-300" />
+                            {u.email}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={cn(
+                              "inline-block px-2 py-0.5 rounded-full text-xs font-medium",
+                              roleDisplay.color
+                            )}
+                          >
+                            {roleDisplay.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {u.department || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                          {formatDateTime(u.last_login_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant="secondary"
+                            className={
+                              u.is_active === 1
+                                ? "bg-brand-100 text-brand-700"
+                                : "bg-slate-100 text-slate-500"
+                            }
+                          >
+                            {u.is_active === 1 ? "启用" : "禁用"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => openEdit(u)}
+                              disabled={isLoading}
+                              title="编辑"
+                              className="text-slate-500 hover:text-brand-600"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => handleDelete(u.id)}
+                              disabled={isLoading}
+                              title="删除"
+                              className="text-slate-500 hover:text-red-500"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <span className="text-sm text-slate-500">
+                共 <span className="font-medium text-slate-700">{total}</span> 条
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: lastPage }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
+                      page === p
+                        ? "bg-brand-600 text-white font-medium"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Dialog */}
@@ -447,21 +533,36 @@ function UsersContent() {
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                   placeholder="name@ihf.org"
+                  disabled={!!editingId}
+                />
+                {editingId && (
+                  <p className="text-xs text-slate-400">邮箱不可修改</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  密码{editingId ? "（留空则不修改）" : ""}
+                </Label>
+                <Input
+                  type="password"
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  placeholder={editingId ? "输入新密码可重置" : "请输入密码"}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>角色</Label>
                 <Select
-                  value={formRole}
-                  onValueChange={(v) => setFormRole((v as AdminRole) || "viewer")}
+                  value={formRoleId}
+                  onValueChange={(v) => setFormRoleId(v || "")}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="选择角色" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roleOptions.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {roleLabels[r]}
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.label || r.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -482,9 +583,18 @@ function UsersContent() {
               </Button>
               <Button
                 onClick={handleSubmit}
+                disabled={
+                  editingId ? updateMutation.loading : createMutation.loading
+                }
                 className="bg-brand-600 hover:bg-brand-700 text-white"
               >
-                {editingId ? "保存" : "新增"}
+                {editingId
+                  ? updateMutation.loading
+                    ? "保存中..."
+                    : "保存"
+                  : createMutation.loading
+                    ? "创建中..."
+                    : "新增"}
               </Button>
             </div>
           </div>

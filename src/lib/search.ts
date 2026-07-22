@@ -76,7 +76,7 @@ function searchProducts(query: string): SearchResult[] {
       title: p.name,
       subtitle: `${p.supplier} · ${p.priceRange}`,
       image: p.image,
-      href: `/product/${p.id}`,
+      href: `/product?id=${p.skuCode || p.id}`,
       tags: [p.certType, p.category].filter(Boolean) as string[],
     }));
 }

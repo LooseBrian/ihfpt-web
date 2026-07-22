@@ -12,10 +12,17 @@ import {
   X,
   Calendar,
   Filter,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  ArrowDownToLine,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGuard } from "@/components/admin/AdminGuard";
 import { checkSensitive } from "@/lib/sensitive-words";
+import { adminApi } from "@/lib/api-client";
+import { useApiPaginated, useApiQuery, useApiMutation } from "@/lib/use-api";
+import { LoadingSpinner, ErrorDisplay, EmptyState } from "@/lib/use-api-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,152 +38,86 @@ import {
 
 // ===== Types =====
 
-type NewsCategory =
-  | "平台动态"
-  | "政策法规"
-  | "市场分析"
-  | "行业资讯"
-  | "合作伙伴";
+type NewsStatus = "draft" | "published" | "archived" | "deleted";
 
-type NewsStatus = "published" | "draft";
-
-interface NewsArticle {
+interface NewsItem {
   id: string;
   title: string;
-  excerpt: string;
-  category: NewsCategory;
-  region: string;
-  source: string;
-  publishedAt: string;
+  slug: string;
+  summary: string | null;
+  content: string | null;
+  cover_image: string | null;
+  category: string; // 'platform', 'policy', 'market', 'industry', 'partner'
   status: NewsStatus;
-  content: string;
-  isDeleted?: boolean; // soft delete flag
+  author_id: string | null;
+  published_at: string | null;
+  view_count: number;
+  is_deleted: number; // 0 or 1
+  created_at: string;
+  updated_at: string;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
 }
 
 // ===== Constants =====
 
-const categories: NewsCategory[] = [
-  "平台动态",
-  "政策法规",
-  "市场分析",
-  "行业资讯",
-  "合作伙伴",
+const categoryOptions = [
+  { value: "platform", label: "平台动态" },
+  { value: "policy", label: "政策法规" },
+  { value: "market", label: "市场分析" },
+  { value: "industry", label: "行业资讯" },
+  { value: "partner", label: "合作伙伴" },
 ];
 
-const regions = ["全部", "OIC", "GCC", "ASEAN", "MENA"];
-
-const categoryBadge: Record<NewsCategory, string> = {
-  平台动态: "bg-brand-100 text-brand-700",
-  政策法规: "bg-trust-100 text-trust-700",
-  市场分析: "bg-gold-100 text-gold-700",
-  行业资讯: "bg-purple-100 text-purple-700",
-  合作伙伴: "bg-pink-100 text-pink-700",
+const categoryLabel: Record<string, string> = {
+  platform: "平台动态",
+  policy: "政策法规",
+  market: "市场分析",
+  industry: "行业资讯",
+  partner: "合作伙伴",
 };
 
-// ===== Seed data =====
+const categoryBadge: Record<string, string> = {
+  platform: "bg-brand-100 text-brand-700",
+  policy: "bg-trust-100 text-trust-700",
+  market: "bg-gold-100 text-gold-700",
+  industry: "bg-purple-100 text-purple-700",
+  partner: "bg-pink-100 text-pink-700",
+};
 
-const seedNews: NewsArticle[] = [
-  {
-    id: "NW-2026-001",
-    title: "2026年全球清真食品市场规模预计突破2.3万亿美元",
-    excerpt: "据最新行业报告，全球清真食品市场持续高速增长，亚太与中东地区贡献主要增量。",
-    category: "市场分析",
-    region: "OIC",
-    source: "IHF研究院",
-    publishedAt: "2026-07-12 09:30",
-    status: "published",
-    content:
-      "根据IHF研究院发布的《2026全球清真食品产业白皮书》，全球清真食品市场规模预计将在2026年突破2.3万亿美元，年复合增长率达7.8%。其中，亚太地区与中东地区贡献了超过60%的市场增量……",
-  },
-  {
-    id: "NW-2026-002",
-    title: "马来西亚JAKIM发布清真认证新规，简化出口流程",
-    excerpt: "新规进一步优化了清真认证申请与年审流程，缩短出口企业认证周期。",
-    category: "政策法规",
-    region: "ASEAN",
-    source: "JAKIM官方",
-    publishedAt: "2026-07-10 14:20",
-    status: "published",
-    content:
-      "马来西亚伊斯兰发展局（JAKIM）近日发布清真认证新规，对出口型企业的认证申请与年审流程进行了优化，认证周期由原来的45个工作日缩短至30个工作日……",
-  },
-  {
-    id: "NW-2026-003",
-    title: "IHF平台与迪拜商会签署战略合作备忘录",
-    excerpt: "双方将在清真食品贸易、认证互认、展会合作等领域开展深度合作。",
-    category: "合作伙伴",
-    region: "GCC",
-    source: "平台动态",
-    publishedAt: "2026-07-08 11:00",
-    status: "published",
-    content:
-      "近日，IHF国际清真食品产业平台与迪拜商会正式签署战略合作备忘录，双方将在清真食品跨境贸易、认证互认、行业展会及供应链金融等领域展开深度合作……",
-  },
-  {
-    id: "NW-2026-004",
-    title: "斋月备货季来临：东南亚清真食品采购需求激增",
-    excerpt: "平台数据显示，进入斋月备货季，来自印尼、马来西亚的采购询盘环比增长120%。",
-    category: "行业资讯",
-    region: "ASEAN",
-    source: "IHF数据中心",
-    publishedAt: "2026-07-06 16:45",
-    status: "published",
-    content:
-      "随着斋月备货季临近，IHF平台数据显示，来自印度尼西亚、马来西亚等东南亚国家的清真食品采购询盘环比增长120%，牛羊肉、预制菜、速冻面点成为热门品类……",
-  },
-  {
-    id: "NW-2026-005",
-    title: "中国清真预制菜出海中东，冷链物流成关键",
-    excerpt: "预制菜凭借标准化与长保质期优势，正成为中东市场的新增长点。",
-    category: "市场分析",
-    region: "MENA",
-    source: "行业观察",
-    publishedAt: "2026-07-04 10:15",
-    status: "draft",
-    content:
-      "近年来，中国清真预制菜凭借标准化生产与较长保质期优势，正加速出海中东市场。然而，跨境冷链物流成本与温控稳定性成为制约增长的关键因素……",
-  },
-  {
-    id: "NW-2026-006",
-    title: "平台动态：IHF供应商入驻审核周期缩短至3个工作日",
-    excerpt: "通过资质预审与智能风控，平台将供应商入驻审核周期由7天缩短至3个工作日。",
-    category: "平台动态",
-    region: "全部",
-    source: "运营部",
-    publishedAt: "2026-07-02 08:50",
-    status: "published",
-    content:
-      "为提升供应商入驻效率，IHF平台通过资质预审与智能风控系统升级，将供应商入驻审核周期由原来的7个工作日缩短至3个工作日，进一步提升平台服务体验……",
-  },
-  {
-    id: "NW-2026-007",
-    title: "沙特阿拉伯放开部分食品进口关税，清真肉类迎利好",
-    excerpt: "沙特对部分冷冻肉类进口关税进行下调，利好清真肉类出口企业。",
-    category: "政策法规",
-    region: "GCC",
-    source: "海关总署",
-    publishedAt: "2026-06-30 13:30",
-    status: "published",
-    content:
-      "沙特阿拉伯近日宣布对部分冷冻肉类进口关税进行下调，其中包括清真牛羊肉、禽肉等品类，这将进一步利好中国清真肉类出口企业开拓海湾市场……",
-  },
-  {
-    id: "NW-2026-008",
-    title: "印尼MUI认证互认协议推动中印清真贸易增长",
-    excerpt: "中印双方推动清真认证互认，预计将带动双边清真食品贸易额显著提升。",
-    category: "行业资讯",
-    region: "ASEAN",
-    source: "贸易促进会",
-    publishedAt: "2026-06-28 15:10",
-    status: "draft",
-    content:
-      "中国与印度尼西亚持续推进清真认证互认协议落地，MUI与中国Halal认证机构互认范围进一步扩大，预计将带动双边清真食品贸易额显著提升……",
-  },
-];
+const statusConfig: Record<NewsStatus, { label: string; className: string }> = {
+  draft: { label: "草稿", className: "bg-slate-100 text-slate-500" },
+  published: { label: "已发布", className: "bg-brand-100 text-brand-700" },
+  archived: { label: "已归档", className: "bg-red-900 text-red-100" },
+  deleted: { label: "已删除", className: "bg-red-900 text-red-100" },
+};
+
+const PAGE_SIZE = 10;
+
+// ===== Helpers =====
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return iso;
+  }
+}
 
 // ===== Page =====
-
-const NEWS_STORAGE_KEY = "ihf_news";
 
 export default function NewsPage() {
   return (
@@ -189,97 +130,105 @@ export default function NewsPage() {
 }
 
 function NewsContent() {
-  const [articles, setArticles] = useState<NewsArticle[]>(seedNews);
-  const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<"list" | "trash">("list");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [regionFilter, setRegionFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [mutationTick, setMutationTick] = useState(0);
 
   // form state
   const [formTitle, setFormTitle] = useState("");
-  const [formExcerpt, setFormExcerpt] = useState("");
-  const [formCategory, setFormCategory] = useState<NewsCategory>("平台动态");
-  const [formRegion, setFormRegion] = useState("全部");
-  const [formSource, setFormSource] = useState("");
+  const [formSummary, setFormSummary] = useState("");
+  const [formCategory, setFormCategory] = useState<string>("platform");
+  const [formCoverImage, setFormCoverImage] = useState("");
   const [formContent, setFormContent] = useState("");
-
-  // Load from localStorage on mount (fall back to seed data)
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(NEWS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as NewsArticle[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Ensure isDeleted flag exists on legacy records
-          setArticles(
-            parsed.map((a) => ({ ...a, isDeleted: a.isDeleted ?? false }))
-          );
-          setLoaded(true);
-          return;
-        }
-      }
-    } catch {
-      // ignore parse errors, fall back to seed
-    }
-    // No stored data: persist seed as the initial dataset
-    try {
-      localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(seedNews));
-    } catch {
-      // ignore storage errors
-    }
-    setLoaded(true);
-  }, []);
-
-  // Persist to localStorage on every change (after initial load)
-  useEffect(() => {
-    if (!loaded) return;
-    try {
-      localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(articles));
-    } catch {
-      // ignore storage errors
-    }
-  }, [articles, loaded]);
-
-  const filtered = useMemo(() => {
-    const base = articles.filter((a) =>
-      activeTab === "trash" ? a.isDeleted : !a.isDeleted
-    );
-    return base.filter((a) => {
-      const matchSearch =
-        !search ||
-        a.title.toLowerCase().includes(search.toLowerCase()) ||
-        a.source.toLowerCase().includes(search.toLowerCase());
-      const matchCategory =
-        categoryFilter === "all" || a.category === categoryFilter;
-      const matchRegion =
-        regionFilter === "all" || a.region === regionFilter;
-      return matchSearch && matchCategory && matchRegion;
-    });
-  }, [articles, activeTab, search, categoryFilter, regionFilter]);
-
-  const stats = useMemo(
-    () => {
-      const live = articles.filter((a) => !a.isDeleted);
-      return {
-        total: live.length,
-        published: live.filter((a) => a.status === "published").length,
-        draft: live.filter((a) => a.status === "draft").length,
-        trash: articles.filter((a) => a.isDeleted).length,
-      };
-    },
-    [articles]
+  const [formStatus, setFormStatus] = useState<"draft" | "published">(
+    "published"
   );
 
+  // ===== Fetch news list (paginated, switches by tab) =====
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    page,
+    total,
+    lastPage,
+    setPage,
+  } = useApiPaginated<NewsItem>(
+    (p, pp) =>
+      adminApi.news({
+        page: p,
+        per_page: pp,
+        status: activeTab === "trash" ? "archived" : undefined,
+        category: categoryFilter === "all" ? undefined : categoryFilter,
+        search: debouncedSearch.trim() || undefined,
+      }) as Promise<PaginatedResponse<NewsItem>>,
+    PAGE_SIZE,
+    { deps: [activeTab, categoryFilter, debouncedSearch, mutationTick] }
+  );
+
+  // ===== Fetch trash count for the badge (skipped while on trash tab) =====
+  const { data: trashData, refetch: refetchTrash } = useApiQuery(
+    () =>
+      adminApi.news({
+        page: 1,
+        per_page: 1,
+        status: "archived",
+      }) as Promise<PaginatedResponse<NewsItem>>,
+    { deps: [mutationTick], skip: activeTab === "trash" }
+  );
+  const trashCount =
+    activeTab === "trash" ? total : trashData?.meta?.total ?? 0;
+
+  // ===== Debounce search input (400ms) and reset to page 1 =====
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search, setPage]);
+
+  // ===== Mutations =====
+  const createMutation = useApiMutation((payload: Record<string, unknown>) =>
+    adminApi.createNews(payload)
+  );
+  const updateMutation = useApiMutation(
+    (params: { id: string; data: Record<string, unknown> }) =>
+      adminApi.updateNews(params.id, params.data)
+  );
+  const deleteMutation = useApiMutation((id: string) =>
+    adminApi.deleteNews(id)
+  );
+  const publishMutation = useApiMutation((id: string) =>
+    adminApi.publishNews(id)
+  );
+  const unpublishMutation = useApiMutation((id: string) =>
+    adminApi.unpublishNews(id)
+  );
+
+  const news = data ?? [];
+
+  // ===== Stats (approximate from current page + meta.total) =====
+  const stats = useMemo(() => {
+    const published = news.filter((n) => n.status === "published").length;
+    const draft = news.filter((n) => n.status === "draft").length;
+    return { total, published, draft };
+  }, [news, total]);
+
+  // ===== Form helpers =====
   const resetForm = () => {
     setFormTitle("");
-    setFormExcerpt("");
-    setFormCategory("平台动态");
-    setFormRegion("全部");
-    setFormSource("");
+    setFormSummary("");
+    setFormCategory("platform");
+    setFormCoverImage("");
     setFormContent("");
+    setFormStatus("published");
     setEditingId(null);
   };
 
@@ -288,14 +237,14 @@ function NewsContent() {
     setDialogOpen(true);
   };
 
-  const openEdit = (article: NewsArticle) => {
-    setEditingId(article.id);
-    setFormTitle(article.title);
-    setFormExcerpt(article.excerpt);
-    setFormCategory(article.category);
-    setFormRegion(article.region);
-    setFormSource(article.source);
-    setFormContent(article.content);
+  const openEdit = (item: NewsItem) => {
+    setEditingId(item.id);
+    setFormTitle(item.title);
+    setFormSummary(item.summary || "");
+    setFormCategory(item.category || "platform");
+    setFormCoverImage(item.cover_image || "");
+    setFormContent(item.content || "");
+    setFormStatus(item.status === "draft" ? "draft" : "published");
     setDialogOpen(true);
   };
 
@@ -309,81 +258,118 @@ function NewsContent() {
     );
   };
 
-  const handlePublish = (id: string) => {
-    const article = articles.find((a) => a.id === id);
-    if (!article) return;
-    if (!confirmPublishWithSensitiveCheck(`${article.title} ${article.content}`))
-      return;
-    setArticles((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, status: "published" as NewsStatus } : a
-      )
-    );
-    alert("资讯已发布");
+  const refreshAll = async () => {
+    await refetch();
+    refetchTrash();
+    setMutationTick((t) => t + 1);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("确定要将该资讯移入回收站吗？可前往回收站恢复。")) {
-      setArticles((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, isDeleted: true } : a))
-      );
+  // ===== Action Handlers =====
+  const handlePublish = async (id: string) => {
+    const item = news.find((n) => n.id === id);
+    if (!item) return;
+    if (
+      !confirmPublishWithSensitiveCheck(`${item.title} ${item.content || ""}`)
+    )
+      return;
+    setActionLoading(id);
+    try {
+      await publishMutation.mutate(id);
+      await refreshAll();
+      alert("资讯已发布");
+    } catch (err) {
+      alert("操作失败：" + (err instanceof Error ? err.message : "未知错误"));
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  const handleRestore = (id: string) => {
-    setArticles((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, isDeleted: false } : a))
-    );
-    alert("资讯已恢复");
+  const handleUnpublish = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await unpublishMutation.mutate(id);
+      await refreshAll();
+      alert("已取消发布，资讯已转为草稿");
+    } catch (err) {
+      alert("操作失败：" + (err instanceof Error ? err.message : "未知错误"));
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleDelete = async (id: string) => {
+    if (!confirm("确定要将该资讯移入回收站吗？可前往回收站恢复。")) return;
+    setActionLoading(id);
+    try {
+      await deleteMutation.mutate(id);
+      await refreshAll();
+      alert("已移入回收站");
+    } catch (err) {
+      alert("操作失败：" + (err instanceof Error ? err.message : "未知错误"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    setActionLoading(id);
+    try {
+      // Restore by updating status back to draft and clearing the deleted flag
+      await updateMutation.mutate({
+        id,
+        data: { status: "draft", is_deleted: 0 },
+      });
+      await refreshAll();
+      alert("资讯已恢复");
+    } catch (err) {
+      alert("操作失败：" + (err instanceof Error ? err.message : "未知错误"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!formTitle.trim()) {
       alert("请填写资讯标题");
       return;
     }
-    // Sensitive word check before publishing content
     if (!confirmPublishWithSensitiveCheck(`${formTitle} ${formContent}`)) {
       return;
     }
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const publishedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-      now.getDate()
-    )} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-    if (editingId) {
-      setArticles((prev) =>
-        prev.map((a) =>
-          a.id === editingId
-            ? {
-                ...a,
-                title: formTitle,
-                excerpt: formExcerpt,
-                category: formCategory,
-                region: formRegion,
-                source: formSource,
-                content: formContent,
-              }
-            : a
-        )
-      );
-    } else {
-      const newArticle: NewsArticle = {
-        id: `NW-2026-${String(articles.length + 1).padStart(3, "0")}`,
-        title: formTitle,
-        excerpt: formExcerpt,
-        category: formCategory,
-        region: formRegion,
-        source: formSource || "未填写",
-        publishedAt,
-        status: "published",
-        content: formContent,
-      };
-      setArticles((prev) => [newArticle, ...prev]);
+    const payload: Record<string, unknown> = {
+      title: formTitle,
+      summary: formSummary,
+      content: formContent,
+      cover_image: formCoverImage.trim() || null,
+      category: formCategory,
+      status: formStatus,
+    };
+
+    setActionLoading(editingId || "form");
+    try {
+      if (editingId) {
+        await updateMutation.mutate({ id: editingId, data: payload });
+      } else {
+        await createMutation.mutate(payload);
+      }
+      setDialogOpen(false);
+      resetForm();
+      await refreshAll();
+      alert(editingId ? "资讯已更新" : "资讯已创建");
+    } catch (err) {
+      alert("操作失败：" + (err instanceof Error ? err.message : "未知错误"));
+    } finally {
+      setActionLoading(null);
     }
-    setDialogOpen(false);
-    resetForm();
+  };
+
+  const switchTab = (tab: "list" | "trash") => {
+    setActiveTab(tab);
+    setSearch("");
+    setDebouncedSearch("");
+    setCategoryFilter("all");
+    setPage(1);
   };
 
   return (
@@ -411,22 +397,19 @@ function NewsContent() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="资讯总数" value={stats.total} color="brand" />
-        <StatCard label="已发布" value={stats.published} color="trust" />
-        <StatCard label="草稿箱" value={stats.draft} color="gold" />
-      </div>
+      {activeTab === "list" && (
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="资讯总数" value={stats.total} color="brand" />
+          <StatCard label="已发布" value={stats.published} color="trust" />
+          <StatCard label="草稿箱" value={stats.draft} color="gold" />
+        </div>
+      )}
 
       {/* Tab switcher */}
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => {
-            setActiveTab("list");
-            setSearch("");
-            setCategoryFilter("all");
-            setRegionFilter("all");
-          }}
+          onClick={() => switchTab("list")}
           className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm border transition-colors ${
             activeTab === "list"
               ? "bg-brand-600 border-brand-600 text-white"
@@ -438,12 +421,7 @@ function NewsContent() {
         </button>
         <button
           type="button"
-          onClick={() => {
-            setActiveTab("trash");
-            setSearch("");
-            setCategoryFilter("all");
-            setRegionFilter("all");
-          }}
+          onClick={() => switchTab("trash")}
           className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm border transition-colors ${
             activeTab === "trash"
               ? "bg-red-600 border-red-600 text-white"
@@ -452,7 +430,7 @@ function NewsContent() {
         >
           <Trash2 className="h-4 w-4" />
           回收站
-          {stats.trash > 0 && (
+          {trashCount > 0 && (
             <span
               className={`min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full text-xs ${
                 activeTab === "trash"
@@ -460,7 +438,7 @@ function NewsContent() {
                   : "bg-red-100 text-red-600"
               }`}
             >
-              {stats.trash}
+              {trashCount}
             </span>
           )}
         </button>
@@ -473,7 +451,7 @@ function NewsContent() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索标题或来源…"
+            placeholder="搜索标题或摘要…"
             className="pl-8"
           />
         </div>
@@ -481,31 +459,19 @@ function NewsContent() {
           <Filter className="h-4 w-4 text-slate-400" />
           <Select
             value={categoryFilter}
-            onValueChange={(v) => setCategoryFilter(v || "all")}
+            onValueChange={(v) => {
+              setCategoryFilter(v || "all");
+              setPage(1);
+            }}
           >
             <SelectTrigger className="w-36">
               <SelectValue placeholder="分类" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部分类</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={regionFilter}
-            onValueChange={(v) => setRegionFilter(v || "all")}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="地区" />
-            </SelectTrigger>
-            <SelectContent>
-              {regions.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r === "all" ? "全部地区" : r}
+              {categoryOptions.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -515,122 +481,183 @@ function NewsContent() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs">
-                <th className="text-left font-medium px-4 py-3">标题</th>
-                <th className="text-left font-medium px-4 py-3">分类</th>
-                <th className="text-left font-medium px-4 py-3">地区</th>
-                <th className="text-left font-medium px-4 py-3">来源</th>
-                <th className="text-left font-medium px-4 py-3">发布时间</th>
-                <th className="text-left font-medium px-4 py-3">状态</th>
-                <th className="text-right font-medium px-4 py-3">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50/60">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-slate-900 max-w-[320px] truncate">
-                      {a.title}
-                    </div>
-                    <div className="text-xs text-slate-400 truncate max-w-[320px]">
-                      {a.excerpt}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${categoryBadge[a.category]}`}
-                    >
-                      {a.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{a.region}</td>
-                  <td className="px-4 py-3 text-slate-600">{a.source}</td>
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-slate-300" />
-                      {a.publishedAt}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {a.isDeleted ? (
-                      <Badge className="bg-red-900 text-red-100">已删除</Badge>
-                    ) : (
-                      <Badge
-                        variant="secondary"
-                        className={
-                          a.status === "published"
-                            ? "bg-brand-100 text-brand-700"
-                            : "bg-slate-100 text-slate-500"
-                        }
-                      >
-                        {a.status === "published" ? "已发布" : "草稿"}
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {activeTab === "trash" ? (
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => handleRestore(a.id)}
-                          title="恢复"
-                          className="text-slate-500 hover:text-brand-600"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => openEdit(a)}
-                          title="编辑"
-                          className="text-slate-500 hover:text-brand-600"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {a.status === "draft" && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handlePublish(a.id)}
-                            title="发布"
-                            className="text-slate-500 hover:text-brand-600"
+        {loading ? (
+          <LoadingSpinner text="加载资讯中..." />
+        ) : error ? (
+          <ErrorDisplay error={error} onRetry={refetch} />
+        ) : news.length === 0 ? (
+          <EmptyState
+            title={activeTab === "trash" ? "回收站为空" : "暂无匹配的资讯"}
+            description={
+              activeTab === "trash"
+                ? "没有已归档的资讯记录"
+                : "尝试调整筛选条件或创建新资讯"
+            }
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs">
+                    <th className="text-left font-medium px-4 py-3">标题</th>
+                    <th className="text-left font-medium px-4 py-3">分类</th>
+                    <th className="text-left font-medium px-4 py-3">发布时间</th>
+                    <th className="text-left font-medium px-4 py-3">浏览量</th>
+                    <th className="text-left font-medium px-4 py-3">状态</th>
+                    <th className="text-right font-medium px-4 py-3">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {news.map((a) => {
+                    const sc = statusConfig[a.status] || statusConfig.draft;
+                    const isLoading = actionLoading === a.id;
+                    return (
+                      <tr key={a.id} className="hover:bg-slate-50/60">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-slate-900 max-w-[320px] truncate">
+                            {a.title}
+                          </div>
+                          <div className="text-xs text-slate-400 truncate max-w-[320px]">
+                            {a.summary || "—"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                              categoryBadge[a.category] ||
+                              "bg-slate-100 text-slate-600"
+                            }`}
                           >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => handleDelete(a.id)}
-                          title="移入回收站"
-                          className="text-slate-500 hover:text-red-500"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
-                    {activeTab === "trash"
-                      ? "回收站为空"
-                      : "暂无匹配的资讯"}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                            {categoryLabel[a.category] || a.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-slate-300" />
+                            {formatDateTime(a.published_at || a.created_at)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          <span className="inline-flex items-center gap-1">
+                            <Eye className="h-3.5 w-3.5 text-slate-300" />
+                            {a.view_count ?? 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="secondary" className={sc.className}>
+                            {sc.label}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          {activeTab === "trash" ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleRestore(a.id)}
+                                disabled={isLoading}
+                                title="恢复"
+                                className="text-slate-500 hover:text-brand-600"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => openEdit(a)}
+                                disabled={isLoading}
+                                title="编辑"
+                                className="text-slate-500 hover:text-brand-600"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              {a.status === "draft" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => handlePublish(a.id)}
+                                  disabled={isLoading}
+                                  title="发布"
+                                  className="text-slate-500 hover:text-brand-600"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {a.status === "published" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => handleUnpublish(a.id)}
+                                  disabled={isLoading}
+                                  title="取消发布"
+                                  className="text-slate-500 hover:text-gold-600"
+                                >
+                                  <ArrowDownToLine className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleDelete(a.id)}
+                                disabled={isLoading}
+                                title="移入回收站"
+                                className="text-slate-500 hover:text-red-500"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <span className="text-sm text-slate-500">
+                共 <span className="font-medium text-slate-700">{total}</span> 条
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: lastPage }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
+                      page === p
+                        ? "bg-brand-600 text-white font-medium"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Publish/Edit Dialog */}
@@ -664,8 +691,8 @@ function NewsContent() {
               <div className="space-y-1.5">
                 <Label>摘要</Label>
                 <Textarea
-                  value={formExcerpt}
-                  onChange={(e) => setFormExcerpt(e.target.value)}
+                  value={formSummary}
+                  onChange={(e) => setFormSummary(e.target.value)}
                   placeholder="一句话摘要，用于列表展示"
                   className="min-h-[60px]"
                 />
@@ -675,44 +702,45 @@ function NewsContent() {
                   <Label>分类</Label>
                   <Select
                     value={formCategory}
-                    onValueChange={(v) => setFormCategory((v as NewsCategory) || "平台动态")}
+                    onValueChange={(v) => setFormCategory(v || "platform")}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="选择分类" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
+                      {categoryOptions.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>地区</Label>
+                  <Label>状态</Label>
                   <Select
-                    value={formRegion}
-                    onValueChange={(v) => setFormRegion(v || "全部")}
+                    value={formStatus}
+                    onValueChange={(v) =>
+                      setFormStatus(
+                        (v as "draft" | "published") || "published"
+                      )
+                    }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="选择地区" />
+                      <SelectValue placeholder="选择状态" />
                     </SelectTrigger>
                     <SelectContent>
-                      {regions.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {r}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="published">直接发布</SelectItem>
+                      <SelectItem value="draft">存为草稿</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>来源</Label>
+                  <Label>封面图片地址</Label>
                   <Input
-                    value={formSource}
-                    onChange={(e) => setFormSource(e.target.value)}
-                    placeholder="如 IHF研究院"
+                    value={formCoverImage}
+                    onChange={(e) => setFormCoverImage(e.target.value)}
+                    placeholder="https://…（选填）"
                   />
                 </div>
               </div>
@@ -732,9 +760,20 @@ function NewsContent() {
               </Button>
               <Button
                 onClick={handleSubmit}
+                disabled={
+                  editingId
+                    ? updateMutation.loading
+                    : createMutation.loading
+                }
                 className="bg-brand-600 hover:bg-brand-700 text-white"
               >
-                {editingId ? "保存修改" : "发布"}
+                {editingId
+                  ? updateMutation.loading
+                    ? "保存中..."
+                    : "保存修改"
+                  : createMutation.loading
+                    ? "发布中..."
+                    : "发布"}
               </Button>
             </div>
           </div>

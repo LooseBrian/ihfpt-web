@@ -5,19 +5,37 @@ import { ProductCard } from "@/components/shared/ProductCard";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useProducts } from "@/lib/product-context";
+import { useBackendProducts, mapBackendProduct } from "@/lib/use-backend-products";
 
 export function ProductsSection() {
-  const { getApprovedProducts, loading } = useProducts();
-  const approvedProducts = getApprovedProducts();
+  const { getApprovedProducts, loading: localLoading } = useProducts();
+  const { products: backendProducts, loading: backendLoading } = useBackendProducts({ per_page: 60 });
+
+  const localApproved = getApprovedProducts();
+  const mappedBackend = backendProducts.map(mapBackendProduct);
+
+  // Merge: backend products first, then local-only products (dedup by name)
+  const backendNames = new Set(mappedBackend.map((p) => p.name));
+  const localOnly = localApproved.filter((p) => !backendNames.has(p.name));
+
+  const allProducts = [...mappedBackend, ...localOnly];
 
   // 优先展示惠发食品产品，不足时用其他产品补齐，最多 8 个
-  const huifaProducts = approvedProducts.filter(
-    (p) => p.supplier === "惠发食品" || p.supplier === "Huifa Foods"
+  const huifaProducts = allProducts.filter(
+    (p) =>
+      p.supplier === "惠发食品" ||
+      p.supplier === "惠发食品有限公司" ||
+      p.supplier === "Huifa Foods"
   );
-  const otherProducts = approvedProducts.filter(
-    (p) => p.supplier !== "惠发食品" && p.supplier !== "Huifa Foods"
+  const otherProducts = allProducts.filter(
+    (p) =>
+      p.supplier !== "惠发食品" &&
+      p.supplier !== "惠发食品有限公司" &&
+      p.supplier !== "Huifa Foods"
   );
   const displayProducts = [...huifaProducts, ...otherProducts].slice(0, 8);
+
+  const loading = localLoading || backendLoading;
 
   return (
     <section id="products" className="py-16 bg-muted/30">
@@ -42,8 +60,8 @@ export function ProductsSection() {
                   </div>
                 </div>
               ))
-            : displayProducts.map((product, index) => (
-                <ProductCard key={product.id} product={product} linkable={index < 4} />
+            : displayProducts.map((product) => (
+                <ProductCard key={product.id} product={product} linkable />
               ))}
         </div>
 

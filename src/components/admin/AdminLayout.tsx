@@ -207,8 +207,12 @@ function UserMenu() {
   const { user, logout } = useAdminAuth();
   if (!user) return null;
 
-  const handleLogout = () => {
-    logout();
+  const primaryRole = user.roles?.[0] || "viewer";
+  const roleLabel = user.roleLabels?.[0] || roleLabels[primaryRole] || primaryRole;
+  const roleColor = roleColors[primaryRole] || roleColors.viewer;
+
+  const handleLogout = async () => {
+    await logout();
     window.location.href = "/admin/login";
   };
 
@@ -222,7 +226,7 @@ function UserMenu() {
         </div>
         <div className="hidden sm:flex flex-col items-start leading-tight">
           <span className="text-sm font-medium text-slate-700">{user.name}</span>
-          <span className="text-[11px] text-slate-400">{roleLabels[user.role]}</span>
+          <span className="text-[11px] text-slate-400">{roleLabel}</span>
         </div>
         <ChevronDown className="h-4 w-4 text-slate-400 hidden sm:block" />
       </DropdownMenuTrigger>
@@ -235,10 +239,10 @@ function UserMenu() {
               <span
                 className={cn(
                   "px-2 py-0.5 text-[10px] font-semibold rounded",
-                  roleColors[user.role]
+                  roleColor
                 )}
               >
-                {roleLabels[user.role]}
+                {roleLabel}
               </span>
               <span className="text-[11px] text-muted-foreground">{user.department}</span>
             </span>

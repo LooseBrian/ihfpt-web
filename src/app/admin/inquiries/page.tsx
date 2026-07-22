@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   ChevronLeft,
@@ -12,7 +12,11 @@ import {
   Clock,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AdminGuard, useAdminAuth } from "@/lib/admin-auth-context";
+import { AdminGuard } from "@/components/admin/AdminGuard";
+import { useAdminAuth } from "@/lib/admin-auth-context";
+import { adminApi } from "@/lib/api-client";
+import { useApiQuery, useApiPaginated, useApiMutation } from "@/lib/use-api";
+import { LoadingSpinner, ErrorDisplay, EmptyState } from "@/lib/use-api-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -27,127 +31,87 @@ import {
 
 // ===== Types =====
 
-type InquiryStatus = "pending" | "replied" | "closed";
+type InquiryStatus = "open" | "quoted" | "closed" | "expired";
 
-interface AdminInquiry {
+interface Inquiry {
   id: string;
-  inquiryNo: string;
-  product: string;
-  buyer: string;
-  supplier: string;
-  amount: string;
+  buyer_id: string;
+  product_id: string | null;
+  title: string;
+  description: string;
+  target_market: string | null;
+  budget_min: string | null;
+  budget_max: string | null;
+  quantity: number | null;
+  unit: string;
+  required_cert_type: string | null;
   status: InquiryStatus;
-  createTime: string;
+  view_count: number;
+  quote_count: number;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  buyer_name?: string;
+  buyer_email?: string;
+  buyer_company?: string;
 }
 
-// ===== Seed Data =====
-
-const seedInquiries: AdminInquiry[] = [
-  {
-    id: "I001",
-    inquiryNo: "INQ-2024-001",
-    product: "清真牛肉干（原味）",
-    buyer: "迪拜环球食品贸易公司",
-    supplier: "惠发食品有限公司",
-    amount: "$50,000",
-    status: "pending",
-    createTime: "2024-07-13 14:30",
-  },
-  {
-    id: "I002",
-    inquiryNo: "INQ-2024-002",
-    product: "清真速冻水饺（牛肉馅）",
-    buyer: "吉隆坡清真食品集团",
-    supplier: "伊利清真食品有限公司",
-    amount: "$35,000",
-    status: "pending",
-    createTime: "2024-07-12 10:20",
-  },
-  {
-    id: "I003",
-    inquiryNo: "INQ-2024-003",
-    product: "清真特级初榨橄榄油",
-    buyer: "雅加达进出口商行",
-    supplier: "甘肃清香油脂有限公司",
-    amount: "$80,000",
-    status: "replied",
-    createTime: "2024-07-11 16:45",
-  },
-  {
-    id: "I004",
-    inquiryNo: "INQ-2024-004",
-    product: "清真天然蜂蜜（百花蜜）",
-    buyer: "伦敦清真食品分销商",
-    supplier: "宁夏塞外蜂业有限公司",
-    amount: "$25,000",
-    status: "replied",
-    createTime: "2024-07-10 09:15",
-  },
-  {
-    id: "I005",
-    inquiryNo: "INQ-2024-005",
-    product: "清真全脂奶粉",
-    buyer: "利雅得食品贸易公司",
-    supplier: "内蒙古草原乳业有限公司",
-    amount: "$120,000",
-    status: "pending",
-    createTime: "2024-07-09 11:00",
-  },
-  {
-    id: "I006",
-    inquiryNo: "INQ-2024-006",
-    product: "清真红烧牛肉方便面",
-    buyer: "伊斯坦布尔清真超市",
-    supplier: "河南白象清真食品有限公司",
-    amount: "$45,000",
-    status: "replied",
-    createTime: "2024-07-08 15:30",
-  },
-  {
-    id: "I007",
-    inquiryNo: "INQ-2024-007",
-    product: "清真黑巧克力（70%可可）",
-    buyer: "卡拉奇食品进口商",
-    supplier: "上海佳丽清真食品有限公司",
-    amount: "$15,000",
-    status: "closed",
-    createTime: "2024-07-07 13:20",
-  },
-  {
-    id: "I008",
-    inquiryNo: "INQ-2024-008",
-    product: "清真复合调味料（烧烤味）",
-    buyer: "开罗清真食品批发商",
-    supplier: "山东欣鑫调味品有限公司",
-    amount: "$8,000",
-    status: "closed",
-    createTime: "2024-07-06 08:10",
-  },
-];
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
 
 // ===== Constants =====
 
 const statusConfig: Record<InquiryStatus, { label: string; className: string }> = {
-  pending: { label: "待回复", className: "bg-gold-100 text-gold-700" },
-  replied: { label: "已回复", className: "bg-brand-100 text-brand-700" },
+  open: { label: "待回复", className: "bg-gold-100 text-gold-700" },
+  quoted: { label: "已报价", className: "bg-brand-100 text-brand-700" },
   closed: { label: "已关闭", className: "bg-muted text-muted-foreground" },
+  expired: { label: "已过期", className: "bg-red-100 text-red-700" },
 };
 
 const statusOptions = [
   { value: "all", label: "全部状态" },
-  { value: "pending", label: "待回复" },
-  { value: "replied", label: "已回复" },
+  { value: "open", label: "待回复" },
+  { value: "quoted", label: "已报价" },
   { value: "closed", label: "已关闭" },
+  { value: "expired", label: "已过期" },
 ];
 
 const PAGE_SIZE = 5;
+
+// Format an ISO date string to "YYYY-MM-DD HH:mm"
+function formatDateTime(iso: string): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return iso;
+  }
+}
+
+// Format a budget range from min/max decimal strings
+function formatBudget(min: string | null, max: string | null): string {
+  if (!min && !max) return "—";
+  if (min && max) return `${min} ~ ${max}`;
+  return (min || max) as string;
+}
 
 // ===== Page Component =====
 
 export default function InquiryManagementPage() {
   return (
     <AdminLayout>
-      <AdminGuard permission="inquiries.view">
+      <AdminGuard requiredPermission="inquiries.view">
         <InquiryManagementContent />
       </AdminGuard>
     </AdminLayout>
@@ -156,59 +120,103 @@ export default function InquiryManagementPage() {
 
 function InquiryManagementContent() {
   const { hasPermission } = useAdminAuth();
-  const [inquiries, setInquiries] = useState<AdminInquiry[]>(seedInquiries);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Stats
-  const stats = useMemo(() => {
-    const total = inquiries.length;
-    const pending = inquiries.filter((i) => i.status === "pending").length;
-    const replied = inquiries.filter((i) => i.status === "replied").length;
-    const closed = inquiries.filter((i) => i.status === "closed").length;
-    return { total, pending, replied, closed };
-  }, [inquiries]);
+  // Fetch status counts in parallel for the stats cards
+  const statsQuery = useApiQuery<Record<string, number>>(async () => {
+    const statuses: InquiryStatus[] = ["open", "quoted", "closed", "expired"];
+    const results = await Promise.all(
+      statuses.map((s) => adminApi.inquiries({ status: s, per_page: 1 }))
+    );
+    return statuses.reduce((acc, s, i) => {
+      const res = results[i] as PaginatedResponse<Inquiry> | undefined;
+      acc[s] = res?.meta?.total ?? 0;
+      return acc;
+    }, {} as Record<string, number>);
+  });
 
-  // Filter
-  const filtered = useMemo(() => {
-    let result = [...inquiries];
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      result = result.filter(
-        (i) =>
-          i.inquiryNo.toLowerCase().includes(q) ||
-          i.product.toLowerCase().includes(q) ||
-          i.buyer.toLowerCase().includes(q) ||
-          i.supplier.toLowerCase().includes(q)
-      );
-    }
-    if (statusFilter !== "all") {
-      result = result.filter((i) => i.status === statusFilter);
-    }
-    if (dateFrom) {
-      result = result.filter((i) => i.createTime.split(" ")[0] >= dateFrom);
-    }
-    if (dateTo) {
-      result = result.filter((i) => i.createTime.split(" ")[0] <= dateTo);
-    }
-    result.sort((a, b) => b.createTime.localeCompare(a.createTime));
-    return result;
-  }, [inquiries, search, statusFilter, dateFrom, dateTo]);
-
-  // Pagination
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageData = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
+  // Fetch inquiries with pagination, search and status filter
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    page,
+    total,
+    lastPage,
+    setPage,
+  } = useApiPaginated<Inquiry>(
+    (p, pp) =>
+      adminApi.inquiries({
+        page: p,
+        per_page: pp,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        search: debouncedSearch.trim() || undefined,
+      }) as Promise<PaginatedResponse<Inquiry>>,
+    PAGE_SIZE,
+    { deps: [statusFilter, debouncedSearch] }
   );
 
-  const handleClose = (id: string) => {
-    setInquiries((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, status: "closed" } : i))
-    );
+  // Debounce search input and reset to page 1 when it changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search, setPage]);
+
+  // Close mutation
+  const closeMutation = useApiMutation((id: string) =>
+    adminApi.closeInquiry(id)
+  );
+
+  // Client-side date filtering on the current page (the backend list API
+  // does not expose date params, so we narrow the visible page further)
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    let result = data;
+    if (dateFrom) {
+      result = result.filter(
+        (i) => (i.created_at || "").slice(0, 10) >= dateFrom
+      );
+    }
+    if (dateTo) {
+      result = result.filter(
+        (i) => (i.created_at || "").slice(0, 10) <= dateTo
+      );
+    }
+    return result;
+  }, [data, dateFrom, dateTo]);
+
+  // Stats derived from the parallel count query
+  const stats = {
+    total: statsQuery.data
+      ? Object.values(statsQuery.data).reduce((a, b) => a + b, 0)
+      : 0,
+    pending: statsQuery.data?.open ?? 0,
+    replied: statsQuery.data?.quoted ?? 0,
+    closed: statsQuery.data?.closed ?? 0,
+  };
+
+  const handleClose = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await closeMutation.mutate(id);
+      await Promise.all([refetch(), statsQuery.refetch()]);
+      alert("询盘已关闭");
+    } catch (err) {
+      alert(
+        "操作失败：" + (err instanceof Error ? err.message : "未知错误")
+      );
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const resetFilters = () => {
@@ -216,17 +224,41 @@ function InquiryManagementContent() {
     setStatusFilter("all");
     setDateFrom("");
     setDateTo("");
-    setCurrentPage(1);
+    setPage(1);
   };
 
   const hasActiveFilters =
     search || statusFilter !== "all" || dateFrom || dateTo;
 
   const statCards = [
-    { label: "总询盘", value: stats.total, icon: MessageSquare, color: "text-brand-600", bg: "bg-brand-50" },
-    { label: "待回复", value: stats.pending, icon: Clock, color: "text-gold-600", bg: "bg-gold-50" },
-    { label: "已回复", value: stats.replied, icon: CheckCheck, color: "text-brand-600", bg: "bg-brand-50" },
-    { label: "已关闭", value: stats.closed, icon: Inbox, color: "text-slate-500", bg: "bg-slate-100" },
+    {
+      label: "总询盘",
+      value: stats.total,
+      icon: MessageSquare,
+      color: "text-brand-600",
+      bg: "bg-brand-50",
+    },
+    {
+      label: "待回复",
+      value: stats.pending,
+      icon: Clock,
+      color: "text-gold-600",
+      bg: "bg-gold-50",
+    },
+    {
+      label: "已报价",
+      value: stats.replied,
+      icon: CheckCheck,
+      color: "text-brand-600",
+      bg: "bg-brand-50",
+    },
+    {
+      label: "已关闭",
+      value: stats.closed,
+      icon: Inbox,
+      color: "text-slate-500",
+      bg: "bg-slate-100",
+    },
   ];
 
   return (
@@ -249,11 +281,15 @@ function InquiryManagementContent() {
           return (
             <Card key={card.label} className="p-4 ring-1 ring-slate-200">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${card.bg} flex items-center justify-center shrink-0`}>
+                <div
+                  className={`w-10 h-10 rounded-lg ${card.bg} flex items-center justify-center shrink-0`}
+                >
                   <Icon className={`h-5 w-5 ${card.color}`} />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-slate-900">{card.value}</div>
+                  <div className="text-2xl font-bold text-slate-900">
+                    {card.value}
+                  </div>
                   <div className="text-xs text-slate-500">{card.label}</div>
                 </div>
               </div>
@@ -268,11 +304,10 @@ function InquiryManagementContent() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="搜索询盘编号 / 产品 / 采购商 / 供应商"
+              placeholder="搜索询盘标题 / 采购商"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setCurrentPage(1);
               }}
               className="pl-9 h-9"
             />
@@ -282,7 +317,7 @@ function InquiryManagementContent() {
             value={statusFilter}
             onValueChange={(v) => {
               setStatusFilter(v || "all");
-              setCurrentPage(1);
+              setPage(1);
             }}
           >
             <SelectTrigger className="h-9 w-32 text-sm">
@@ -304,7 +339,6 @@ function InquiryManagementContent() {
               value={dateFrom}
               onChange={(e) => {
                 setDateFrom(e.target.value);
-                setCurrentPage(1);
               }}
               className="h-9 w-[140px] text-sm"
             />
@@ -314,14 +348,18 @@ function InquiryManagementContent() {
               value={dateTo}
               onChange={(e) => {
                 setDateTo(e.target.value);
-                setCurrentPage(1);
               }}
               className="h-9 w-[140px] text-sm"
             />
           </div>
 
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 text-slate-500">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="h-9 text-slate-500"
+            >
               重置筛选
             </Button>
           )}
@@ -330,118 +368,146 @@ function InquiryManagementContent() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/50 border-b border-slate-200">
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">询盘编号</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">产品</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">采购商</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">供应商</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">金额</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">状态</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">创建时间</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
-                    <Inbox className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                    暂无符合条件的询盘
-                  </td>
-                </tr>
-              ) : (
-                pageData.map((inquiry) => {
-                  const sc = statusConfig[inquiry.status];
-                  return (
-                    <tr key={inquiry.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                      {/* Inquiry No */}
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-xs text-brand-700 font-medium">{inquiry.inquiryNo}</span>
-                      </td>
-                      {/* Product */}
-                      <td className="px-4 py-3 font-medium text-slate-900">{inquiry.product}</td>
-                      {/* Buyer */}
-                      <td className="px-4 py-3 text-slate-600">{inquiry.buyer}</td>
-                      {/* Supplier */}
-                      <td className="px-4 py-3 text-slate-600">{inquiry.supplier}</td>
-                      {/* Amount */}
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-slate-900">{inquiry.amount}</span>
-                      </td>
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        <Badge className={sc.className}>{sc.label}</Badge>
-                      </td>
-                      {/* Create Time */}
-                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{inquiry.createTime}</td>
-                      {/* Actions */}
-                      <td className="px-4 py-3">
-                        {inquiry.status !== "closed" ? (
-                          hasPermission("inquiries.close") ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1 text-slate-600"
-                              onClick={() => handleClose(inquiry.id)}
-                            >
-                              <Lock className="h-3.5 w-3.5" />
-                              关闭
-                            </Button>
+        {loading ? (
+          <LoadingSpinner text="加载询盘数据中..." />
+        ) : error ? (
+          <ErrorDisplay error={error} onRetry={refetch} />
+        ) : filteredData.length === 0 ? (
+          <EmptyState
+            title="暂无符合条件的询盘"
+            description="尝试调整筛选条件或稍后重试"
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-slate-200">
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">询盘编号</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">询盘标题</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">采购商</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">报价数</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">预算</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">状态</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">创建时间</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((inquiry) => {
+                    const sc = statusConfig[inquiry.status];
+                    const isLoading = actionLoading === inquiry.id;
+                    return (
+                      <tr
+                        key={inquiry.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors"
+                      >
+                        {/* Inquiry No */}
+                        <td className="px-4 py-3">
+                          <span className="font-mono text-xs text-brand-700 font-medium">
+                            #{inquiry.id}
+                          </span>
+                        </td>
+                        {/* Title */}
+                        <td className="px-4 py-3 font-medium text-slate-900">
+                          {inquiry.title}
+                        </td>
+                        {/* Buyer */}
+                        <td className="px-4 py-3 text-slate-600">
+                          {inquiry.buyer_company ||
+                            inquiry.buyer_name ||
+                            "—"}
+                        </td>
+                        {/* Quote Count */}
+                        <td className="px-4 py-3 text-slate-600">
+                          {inquiry.quote_count ?? 0}
+                        </td>
+                        {/* Budget */}
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-slate-900">
+                            {formatBudget(inquiry.budget_min, inquiry.budget_max)}
+                          </span>
+                        </td>
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <Badge className={sc.className}>{sc.label}</Badge>
+                        </td>
+                        {/* Create Time */}
+                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                          {formatDateTime(inquiry.created_at)}
+                        </td>
+                        {/* Actions */}
+                        <td className="px-4 py-3">
+                          {inquiry.status === "open" ||
+                          inquiry.status === "quoted" ? (
+                            hasPermission("inquiries.close") ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 text-slate-600"
+                                disabled={isLoading}
+                                onClick={() => handleClose(inquiry.id)}
+                              >
+                                <Lock className="h-3.5 w-3.5" />
+                                关闭
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )
                           ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )
-                        ) : (
-                          <span className="text-xs text-slate-400">已关闭</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            <span className="text-xs text-slate-400">
+                              {inquiry.status === "closed"
+                                ? "已关闭"
+                                : "已过期"}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-          <span className="text-sm text-slate-500">
-            共 <span className="font-medium text-slate-700">{filtered.length}</span> 条
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
-                  currentPage === page
-                    ? "bg-brand-600 text-white font-medium"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={currentPage === totalPages || totalPages === 0}
-              onClick={() => setCurrentPage((p) => p + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <span className="text-sm text-slate-500">
+                共 <span className="font-medium text-slate-700">{total}</span> 条
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: lastPage }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
+                      page === p
+                        ? "bg-brand-600 text-white font-medium"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

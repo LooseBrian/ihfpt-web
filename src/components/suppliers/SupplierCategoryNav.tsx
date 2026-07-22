@@ -4,16 +4,27 @@ import { useState } from "react";
 import { Flame, TrendingUp } from "lucide-react";
 import { supplierCategoryTabs } from "@/lib/data";
 
-export function SupplierCategoryNav() {
+interface SupplierCategoryNavProps {
+  /** Called when a category card is clicked with (tabId, optionId) */
+  onSelect?: (tabId: string, optionId: string) => void;
+}
+
+export function SupplierCategoryNav({ onSelect }: SupplierCategoryNavProps) {
   const [activeTab, setActiveTab] = useState(supplierCategoryTabs[0].id);
   const activeTabData = supplierCategoryTabs.find((t) => t.id === activeTab);
 
+  const handleCardClick = (optionId: string) => {
+    if (onSelect) {
+      onSelect(activeTab, optionId);
+    }
+  };
+
   return (
-    <section className="py-10 bg-muted/30 border-t">
+    <section id="category-nav" className="py-10 bg-muted/30 border-t">
       <div className="container mx-auto px-4">
         <div className="mb-6">
           <h2 className="text-xl font-bold text-foreground">供应商分类导航</h2>
-          <p className="text-sm text-muted-foreground mt-1">多维度快速定位目标企业</p>
+          <p className="text-sm text-muted-foreground mt-1">多维度快速定位目标企业 · 点击卡片快速筛选供应商</p>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
@@ -44,10 +55,10 @@ export function SupplierCategoryNav() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {activeTabData?.options.map((opt) => (
-              <a
+              <button
                 key={opt.id}
-                href="#"
-                className="group flex flex-col items-center gap-2 p-4 rounded-lg border hover:border-brand-300 hover:bg-brand-50 transition-all text-center"
+                onClick={() => handleCardClick(opt.id)}
+                className="group flex flex-col items-center gap-2 p-4 rounded-lg border hover:border-brand-300 hover:bg-brand-50 transition-all text-center cursor-pointer"
               >
                 <span className="text-sm font-medium text-foreground group-hover:text-brand-700">
                   {opt.label}
@@ -67,7 +78,7 @@ export function SupplierCategoryNav() {
                     </span>
                   )}
                 </div>
-              </a>
+              </button>
             ))}
           </div>
         </div>

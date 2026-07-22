@@ -42,12 +42,17 @@ const initialFilters: ProductFilters = {
 };
 
 export default function ProductsPage() {
-  const { getApprovedProducts, loading } = useProducts();
+  const { getApprovedProducts, loading, refreshFromBackend } = useProducts();
   const [filters, setFilters] = useState<ProductFilters>(initialFilters);
   const [sort, setSort] = useState<SortOption>("default");
   const [pageSize, setPageSize] = useState<PageSize>(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  // Sync from backend when page loads (picks up admin-approved products)
+  useEffect(() => {
+    refreshFromBackend();
+  }, [refreshFromBackend]);
 
   const approvedProducts = getApprovedProducts();
 

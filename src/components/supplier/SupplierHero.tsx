@@ -18,7 +18,7 @@ export function SupplierHero() {
               <Factory className="h-8 w-8 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="px-2 py-0.5 bg-brand-500 text-white text-xs font-bold rounded">
                   供应商
                 </span>
@@ -28,6 +28,11 @@ export function SupplierHero() {
                 <span className="px-2 py-0.5 bg-white/10 text-brand-100 text-xs font-medium rounded">
                   已认证
                 </span>
+                {user?.userCode && (
+                  <span className="px-2 py-0.5 bg-white/10 text-brand-100 text-xs font-mono rounded">
+                    供应商编码: {user.userCode}
+                  </span>
+                )}
               </div>
               <h1 className="text-2xl md:text-3xl font-bold">欢迎回来，{shortName}</h1>
               <p className="text-brand-100 text-sm mt-1">

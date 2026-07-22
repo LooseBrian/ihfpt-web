@@ -1,6 +1,17 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  authApi,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+  clearTokens,
+  getStoredAdmin,
+  setStoredAdmin,
+  ApiError,
+  type AdminInfo,
+} from "./api-client";
 
 // ===== Admin Role System =====
 
@@ -10,13 +21,15 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: AdminRole;
+  roles: string[];
+  roleLabels: string[];
+  permissions: string[];
   department: string;
   avatar?: string;
   lastLogin?: string;
 }
 
-// ===== Permission Matrix =====
+// ===== Permission Matrix (fallback for offline/legacy) =====
 
 export type Permission =
   | "dashboard.view"
@@ -38,37 +51,7 @@ export type Permission =
   | "settings.system"
   | "settings.logs";
 
-const rolePermissions: Record<AdminRole, Permission[]> = {
-  super_admin: [
-    "dashboard.view", "products.review", "products.approve", "products.reject",
-    "suppliers.view", "suppliers.verify", "suppliers.suspend",
-    "buyers.view", "buyers.suspend",
-    "inquiries.view", "inquiries.close",
-    "content.news", "content.banner", "content.publish",
-    "settings.users", "settings.roles", "settings.system", "settings.logs",
-  ],
-  operations_manager: [
-    "dashboard.view", "products.review", "products.approve", "products.reject",
-    "suppliers.view", "suppliers.verify", "suppliers.suspend",
-    "buyers.view", "buyers.suspend",
-    "inquiries.view", "inquiries.close",
-    "content.news", "content.banner", "content.publish",
-  ],
-  content_editor: [
-    "dashboard.view", "content.news", "content.banner", "content.publish",
-    "products.review",
-  ],
-  auditor: [
-    "dashboard.view", "products.review", "products.approve", "products.reject",
-    "suppliers.view", "suppliers.verify",
-    "inquiries.view",
-  ],
-  viewer: [
-    "dashboard.view", "suppliers.view", "buyers.view", "inquiries.view",
-  ],
-};
-
-export const roleLabels: Record<AdminRole, string> = {
+export const roleLabels: Record<string, string> = {
   super_admin: "超级管理员",
   operations_manager: "运营主管",
   content_editor: "内容编辑",
@@ -76,7 +59,7 @@ export const roleLabels: Record<AdminRole, string> = {
   viewer: "只读查看员",
 };
 
-export const roleColors: Record<AdminRole, string> = {
+export const roleColors: Record<string, string> = {
   super_admin: "bg-red-100 text-red-700",
   operations_manager: "bg-brand-100 text-brand-700",
   content_editor: "bg-trust-100 text-trust-700",
@@ -84,117 +67,140 @@ export const roleColors: Record<AdminRole, string> = {
   viewer: "bg-muted text-muted-foreground",
 };
 
-// ===== Demo Admin Accounts =====
-
-const demoAdmins: (AdminUser & { password: string })[] = [
-  {
-    id: "ADM-001",
-    name: "系统管理员",
-    email: "admin@ihf.org",
-    password: "admin123",
-    role: "super_admin",
-    department: "技术部",
-  },
-  {
-    id: "ADM-002",
-    name: "运营张经理",
-    email: "ops@ihf.org",
-    password: "ops123",
-    role: "operations_manager",
-    department: "运营部",
-  },
-  {
-    id: "ADM-003",
-    name: "编辑小李",
-    email: "editor@ihf.org",
-    password: "editor123",
-    role: "content_editor",
-    department: "内容部",
-  },
-  {
-    id: "ADM-004",
-    name: "审核员王工",
-    email: "audit@ihf.org",
-    password: "audit123",
-    role: "auditor",
-    department: "审核部",
-  },
-  {
-    id: "ADM-005",
-    name: "观察员赵老师",
-    email: "viewer@ihf.org",
-    password: "viewer123",
-    role: "viewer",
-    department: "监督部",
-  },
-];
-
 // ===== Context =====
 
 interface AdminAuthContextType {
   user: AdminUser | null;
   isLoggedIn: boolean;
   loading: boolean;
-  login: (email: string, password: string) => { success: boolean; error?: string };
-  logout: () => void;
-  hasPermission: (perm: Permission) => boolean;
-  hasAnyPermission: (perms: Permission[]) => boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  hasPermission: (perm: string) => boolean;
+  hasAnyPermission: (perms: string[]) => boolean;
+  /** Force re-fetch admin info from backend */
+  refreshUser: () => Promise<void>;
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
-
-const STORAGE_KEY = "ihf_admin_user";
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // On mount: restore session from localStorage tokens
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setUser(JSON.parse(stored));
+    const restoreSession = async () => {
+      const token = getAccessToken();
+      const storedAdmin = getStoredAdmin();
+
+      if (token && storedAdmin) {
+        // We have a token and cached admin data - restore immediately
+        setUser(mapAdminInfo(storedAdmin));
+
+        // Validate token is still valid by calling /me
+        try {
+          const freshAdmin = await authApi.adminMe();
+          const mappedAdmin = mapAdminInfo(freshAdmin);
+          setUser(mappedAdmin);
+          setStoredAdmin(freshAdmin);
+        } catch (err) {
+          // Token might be expired - try refresh
+          const refreshToken = getRefreshToken();
+          if (refreshToken) {
+            try {
+              const result = await authApi.adminRefresh(refreshToken);
+              setTokens(result.access_token, result.refresh_token);
+              // Fetch admin info with new token
+              const freshAdmin = await authApi.adminMe();
+              const mappedAdmin = mapAdminInfo(freshAdmin);
+              setUser(mappedAdmin);
+              setStoredAdmin(freshAdmin);
+            } catch {
+              // Refresh failed - clear everything
+              clearTokens();
+              setUser(null);
+            }
+          } else {
+            clearTokens();
+            setUser(null);
+          }
+        }
       }
-    } catch {
-      // ignore
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    restoreSession();
   }, []);
 
-  const login = (email: string, password: string): { success: boolean; error?: string } => {
-    const found = demoAdmins.find(
-      (a) => a.email.toLowerCase() === email.toLowerCase() && a.password === password
-    );
-    if (!found) {
-      return { success: false, error: "邮箱或密码错误" };
+  const login = useCallback(
+    async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const loginResp = await authApi.adminLogin(email, password);
+
+        // Store tokens
+        setTokens(loginResp.access_token, loginResp.refresh_token);
+
+        // Map and store admin data
+        const adminInfo = loginResp.admin;
+        setStoredAdmin(adminInfo);
+
+        const mappedAdmin = mapAdminInfo(adminInfo);
+        setUser(mappedAdmin);
+
+        return { success: true };
+      } catch (err) {
+        if (err instanceof ApiError) {
+          return { success: false, error: err.message };
+        }
+        return { success: false, error: "登录失败，请检查网络连接" };
+      }
+    },
+    []
+  );
+
+  const logout = useCallback(async () => {
+    // Notify backend to invalidate tokens
+    try {
+      await authApi.adminLogout();
+    } catch {
+      // Even if backend logout fails, clear local state
     }
-    const { password: _, ...userWithoutPassword } = found;
-    const loggedIn: AdminUser = {
-      ...userWithoutPassword,
-      lastLogin: new Date().toISOString(),
-    };
-    setUser(loggedIn);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedIn));
-    return { success: true };
-  };
 
-  const logout = () => {
+    clearTokens();
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
-  };
+  }, []);
 
-  const hasPermission = (perm: Permission): boolean => {
-    if (!user) return false;
-    return rolePermissions[user.role]?.includes(perm) ?? false;
-  };
+  const refreshUser = useCallback(async () => {
+    try {
+      const freshAdmin = await authApi.adminMe();
+      const mappedAdmin = mapAdminInfo(freshAdmin);
+      setUser(mappedAdmin);
+      setStoredAdmin(freshAdmin);
+    } catch {
+      // Silent fail - keep existing user data
+    }
+  }, []);
 
-  const hasAnyPermission = (perms: Permission[]): boolean => {
-    return perms.some((p) => hasPermission(p));
-  };
+  const hasPermission = useCallback(
+    (perm: string): boolean => {
+      if (!user) return false;
+      // Use backend-provided permissions (dynamic, not hardcoded)
+      return user.permissions.includes(perm);
+    },
+    [user]
+  );
+
+  const hasAnyPermission = useCallback(
+    (perms: string[]): boolean => {
+      if (!user || perms.length === 0) return false;
+      return perms.some((p) => user.permissions.includes(p));
+    },
+    [user]
+  );
 
   return (
     <AdminAuthContext.Provider
-      value={{ user, isLoggedIn: !!user, loading, login, logout, hasPermission, hasAnyPermission }}
+      value={{ user, isLoggedIn: !!user, loading, login, logout, hasPermission, hasAnyPermission, refreshUser }}
     >
       {children}
     </AdminAuthContext.Provider>
@@ -213,7 +219,7 @@ export function AdminGuard({
   permission,
   children,
 }: {
-  permission: Permission;
+  permission: string;
   children: ReactNode;
 }) {
   const { user, loading, hasPermission } = useAdminAuth();
@@ -244,6 +250,7 @@ export function AdminGuard({
   }
 
   if (!hasPermission(permission)) {
+    const userRoleLabel = user.roleLabels?.[0] || user.roles?.[0] || "未知角色";
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center max-w-sm">
@@ -254,7 +261,7 @@ export function AdminGuard({
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-1">权限不足</h3>
           <p className="text-sm text-muted-foreground">
-            您当前角色（{roleLabels[user.role]}）无权访问此页面，请联系超级管理员分配相应权限。
+            您当前角色（{userRoleLabel}）无权访问此页面，请联系超级管理员分配相应权限。
           </p>
         </div>
       </div>
@@ -262,4 +269,20 @@ export function AdminGuard({
   }
 
   return <>{children}</>;
+}
+
+// ===== Helpers =====
+
+function mapAdminInfo(info: AdminInfo): AdminUser {
+  return {
+    id: info.id,
+    name: info.name,
+    email: info.email,
+    roles: info.roles?.map((r) => r.name) || [],
+    roleLabels: info.role_labels || info.roles?.map((r) => r.label || r.name) || [],
+    permissions: info.permissions || [],
+    department: info.department || "",
+    avatar: info.avatar,
+    lastLogin: info.last_login_at,
+  };
 }

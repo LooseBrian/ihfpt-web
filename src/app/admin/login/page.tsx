@@ -9,6 +9,7 @@ import {
   EyeOff,
   AlertCircle,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { useAdminAuth, roleLabels } from "@/lib/admin-auth-context";
 import { Button } from "@/components/ui/button";
@@ -16,11 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const demoAccounts = [
-  { role: "super_admin", email: "admin@ihf.org", password: "admin123" },
-  { role: "operations_manager", email: "ops@ihf.org", password: "ops123" },
-  { role: "content_editor", email: "editor@ihf.org", password: "editor123" },
-  { role: "auditor", email: "audit@ihf.org", password: "audit123" },
-  { role: "viewer", email: "viewer@ihf.org", password: "viewer123" },
+  { role: "super_admin", email: "admin@ihf.com", password: "admin123" },
+  { role: "operations_manager", email: "ops@ihf.com", password: "ops123" },
+  { role: "content_editor", email: "editor@ihf.com", password: "editor123" },
+  { role: "auditor", email: "audit@ihf.com", password: "audit123" },
+  { role: "viewer", email: "viewer@ihf.com", password: "viewer123" },
 ] as const;
 
 export default function AdminLoginPage() {
@@ -32,7 +33,6 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If already logged in, redirect to admin dashboard
     if (isLoggedIn) {
       const params = new URLSearchParams(window.location.search);
       const redirect = params.get("redirect") || "/admin";
@@ -40,19 +40,18 @@ export default function AdminLoginPage() {
     }
   }, [isLoggedIn]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const result = login(email, password);
+    const result = await login(email, password);
     if (!result.success) {
       setError(result.error || "登录失败，请重试");
       setLoading(false);
       return;
     }
 
-    // On success, redirect to admin dashboard
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect") || "/admin";
     window.location.href = redirect;
@@ -109,6 +108,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-10 pl-9"
                   autoComplete="email"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -129,12 +129,14 @@ export default function AdminLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-10 pl-9 pr-9"
                   autoComplete="current-password"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -153,7 +155,7 @@ export default function AdminLoginPage() {
             >
               {loading ? (
                 <>
-                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   登录中...
                 </>
               ) : (

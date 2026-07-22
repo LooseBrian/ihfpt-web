@@ -6,6 +6,7 @@ import { useFavorites } from "@/lib/favorites-context";
 import { useProducts } from "@/lib/product-context";
 import { useState } from "react";
 import { InquiryDialog } from "@/components/inquiry/InquiryDialog";
+import { IMAGE_PLACEHOLDER_DATAURI } from "@/lib/product-images";
 
 export function BuyerFavorites() {
   const { getProductFavorites, getSupplierFavorites, removeFavorite, favorites } = useFavorites();
@@ -146,6 +147,9 @@ export function BuyerFavorites() {
                             src={product.image}
                             alt={product.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            onError={(e) => {
+                              e.currentTarget.src = IMAGE_PLACEHOLDER_DATAURI;
+                            }}
                           />
                           <button
                             onClick={(e) => handleRemove(product.id, e)}

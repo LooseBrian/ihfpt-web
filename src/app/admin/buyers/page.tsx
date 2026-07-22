@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   ChevronLeft,
@@ -8,18 +8,18 @@ import {
   Users,
   Ban,
   Unlock,
-  MessageSquareOff,
-  MessageSquare,
   UserCheck,
-  Clock,
-  UserPlus,
+  ShieldCheck,
   Mail,
-  MapPin,
+  Phone,
   X,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGuard } from "@/components/admin/AdminGuard";
 import { useAdminAuth } from "@/lib/admin-auth-context";
+import { adminApi } from "@/lib/api-client";
+import { useApiPaginated, useApiMutation } from "@/lib/use-api";
+import { LoadingSpinner, ErrorDisplay, EmptyState } from "@/lib/use-api-ui";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -35,163 +35,93 @@ import {
 
 // ===== Types =====
 
-type VerifyStatus = "verified" | "pending" | "unverified";
-type BuyerStatus = "active" | "suspended";
-
-interface AdminBuyer {
+// Backend Buyer record (User table, type='buyer')
+interface Buyer {
   id: string;
   name: string;
-  contact: string;
   email: string;
-  region: string;
-  inquiryCount: number;
-  verifyStatus: VerifyStatus;
-  status: BuyerStatus;
-  registerTime: string;
+  phone: string | null;
+  company_name: string | null;
+  type: "buyer";
+  avatar: string | null;
+  is_active: number; // 0 or 1
+  email_verified: number; // 0 or 1
+  banned_until: string | null;
+  ban_reason: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-// Restriction info (used for both ban and silence)
-interface RestrictionInfo {
-  targetId: string;
-  duration: number; // days, 0 = permanent
-  appliedAt: string; // ISO string
-  expiresAt: string | null; // ISO string, null = permanent
-  reason: string;
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
 }
-
-// ===== Seed Data =====
-
-const seedBuyers: AdminBuyer[] = [
-  {
-    id: "B001",
-    name: "迪拜环球食品贸易公司",
-    contact: "张明",
-    email: "zhangming@dubaiglobal.ae",
-    region: "中东/迪拜",
-    inquiryCount: 25,
-    verifyStatus: "verified",
-    status: "active",
-    registerTime: "2023-05-10",
-  },
-  {
-    id: "B002",
-    name: "吉隆坡清真食品集团",
-    contact: "Ahmad Lim",
-    email: "ahmad@klhalal.my",
-    region: "东南亚/马来西亚",
-    inquiryCount: 18,
-    verifyStatus: "verified",
-    status: "active",
-    registerTime: "2023-06-15",
-  },
-  {
-    id: "B003",
-    name: "雅加达进出口商行",
-    contact: "李华强",
-    email: "lihq@jakartaimport.id",
-    region: "东南亚/印尼",
-    inquiryCount: 12,
-    verifyStatus: "verified",
-    status: "active",
-    registerTime: "2023-07-20",
-  },
-  {
-    id: "B004",
-    name: "伦敦清真食品分销商",
-    contact: "James Smith",
-    email: "j.smith@londonhalal.uk",
-    region: "欧洲/英国",
-    inquiryCount: 30,
-    verifyStatus: "verified",
-    status: "active",
-    registerTime: "2023-08-05",
-  },
-  {
-    id: "B005",
-    name: "利雅得食品贸易公司",
-    contact: "王大力",
-    email: "wangdl@riyadhfood.sa",
-    region: "中东/沙特",
-    inquiryCount: 8,
-    verifyStatus: "pending",
-    status: "active",
-    registerTime: "2024-01-12",
-  },
-  {
-    id: "B006",
-    name: "伊斯坦布尔清真超市",
-    contact: "Mehmet Chen",
-    email: "mehmet@istanbulhalal.tr",
-    region: "中东/土耳其",
-    inquiryCount: 5,
-    verifyStatus: "pending",
-    status: "active",
-    registerTime: "2024-02-28",
-  },
-  {
-    id: "B007",
-    name: "卡拉奇食品进口商",
-    contact: "Ali Zhang",
-    email: "aliz@karachifood.pk",
-    region: "南亚/巴基斯坦",
-    inquiryCount: 15,
-    verifyStatus: "verified",
-    status: "suspended",
-    registerTime: "2024-03-15",
-  },
-  {
-    id: "B008",
-    name: "开罗清真食品批发商",
-    contact: "Hassan Liu",
-    email: "hassan@cairohalal.eg",
-    region: "北非/埃及",
-    inquiryCount: 3,
-    verifyStatus: "pending",
-    status: "active",
-    registerTime: "2024-06-01",
-  },
-];
 
 // ===== Constants =====
 
-const verifyConfig: Record<VerifyStatus, { label: string; className: string }> = {
-  verified: { label: "已认证", className: "bg-brand-100 text-brand-700" },
-  pending: { label: "待审核", className: "bg-gold-100 text-gold-700" },
-  unverified: { label: "未认证", className: "bg-muted text-muted-foreground" },
-};
+// Ban duration options; value is the string expected by the backend API
+// ('1' | '3' | '7' | 'permanent')
+const banDurationOptions = [
+  { value: "1", label: "禁止1天" },
+  { value: "3", label: "禁止3天" },
+  { value: "7", label: "禁止7天" },
+  { value: "permanent", label: "永久禁止" },
+];
 
+// Verify (email_verified) filter options. Applied client-side on the current
+// page because the backend list API does not expose an email_verified param.
 const verifyOptions = [
   { value: "all", label: "全部认证状态" },
   { value: "verified", label: "已认证" },
-  { value: "pending", label: "待审核" },
   { value: "unverified", label: "未认证" },
-];
-
-const regionOptions = [
-  { value: "all", label: "全部地区" },
-  { value: "中东", label: "中东" },
-  { value: "东南亚", label: "东南亚" },
-  { value: "欧洲", label: "欧洲" },
-  { value: "南亚", label: "南亚" },
-  { value: "北非", label: "北非" },
 ];
 
 const PAGE_SIZE = 5;
 
-// Restriction duration options (days, 0 = permanent)
-const restrictionDurationOptions = [
-  { value: 1, label: "1天" },
-  { value: 3, label: "3天" },
-  { value: 7, label: "7天" },
-  { value: 0, label: "永久" },
-];
+// Format an ISO date string to "YYYY-MM-DD HH:mm"
+function formatDateTime(iso: string): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return iso;
+  }
+}
 
-// Calculate remaining days; returns null if permanent, -1 if expired
-function getRemainingDays(expiresAt: string | null): number {
-  if (!expiresAt) return 0; // permanent
-  const ms = new Date(expiresAt).getTime() - Date.now();
-  if (ms <= 0) return -1;
-  return Math.ceil(ms / (24 * 60 * 60 * 1000));
+// Determine whether a buyer is currently banned.
+// - banned_until null & ban_reason null  -> not banned
+// - banned_until null & ban_reason set    -> permanent ban
+// - banned_until set                      -> banned while the date is in the future
+function getBanStatus(b: Buyer): {
+  isBanned: boolean;
+  isPermanent: boolean;
+  remainingDays: number;
+} {
+  const hasReason = !!b.ban_reason;
+  if (!b.banned_until) {
+    if (hasReason) {
+      return { isBanned: true, isPermanent: true, remainingDays: 0 };
+    }
+    return { isBanned: false, isPermanent: false, remainingDays: 0 };
+  }
+  const ms = new Date(b.banned_until).getTime() - Date.now();
+  if (ms <= 0) {
+    return { isBanned: false, isPermanent: false, remainingDays: 0 };
+  }
+  return {
+    isBanned: true,
+    isPermanent: false,
+    remainingDays: Math.ceil(ms / (24 * 60 * 60 * 1000)),
+  };
 }
 
 // ===== Page Component =====
@@ -199,7 +129,7 @@ function getRemainingDays(expiresAt: string | null): number {
 export default function BuyerManagementPage() {
   return (
     <AdminLayout>
-      <AdminGuard requiredPermission="buyers.suspend">
+      <AdminGuard requiredPermission="buyers.view">
         <BuyerManagementContent />
       </AdminGuard>
     </AdminLayout>
@@ -208,168 +138,142 @@ export default function BuyerManagementPage() {
 
 function BuyerManagementContent() {
   const { hasPermission } = useAdminAuth();
-  const [buyers, setBuyers] = useState<AdminBuyer[]>(seedBuyers);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [verifyFilter, setVerifyFilter] = useState("all");
-  const [regionFilter, setRegionFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
 
-  // Restriction state: ban (禁止登录) and silence (禁言), keyed by buyer id
-  const [banInfo, setBanInfo] = useState<Record<string, RestrictionInfo>>(() => {
-    const now = new Date().toISOString();
-    const init: Record<string, RestrictionInfo> = {};
-    for (const b of seedBuyers) {
-      if (b.status === "suspended") {
-        init[b.id] = {
-          targetId: b.id,
-          duration: 0,
-          appliedAt: now,
-          expiresAt: null,
-          reason: "历史暂停记录",
-        };
-      }
-    }
-    return init;
-  });
-  const [silenceInfo, setSilenceInfo] = useState<Record<string, RestrictionInfo>>({});
+  // Ban dialog state
+  const [banTarget, setBanTarget] = useState<Buyer | null>(null);
+  const [banDuration, setBanDuration] = useState<string>("1");
+  const [banReason, setBanReason] = useState("");
 
-  // Shared dialog state for applying a restriction (ban or silence)
-  const [dialogType, setDialogType] = useState<"ban" | "silence" | null>(null);
-  const [dialogTarget, setDialogTarget] = useState<AdminBuyer | null>(null);
-  const [dialogDuration, setDialogDuration] = useState<number>(1);
-  const [dialogReason, setDialogReason] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Stats
-  const stats = useMemo(() => {
-    const total = buyers.length;
-    const verified = buyers.filter((b) => b.verifyStatus === "verified").length;
-    const pending = buyers.filter((b) => b.verifyStatus === "pending").length;
-    // Simulate "this month new" — buyers registered in June 2024
-    const thisMonth = buyers.filter((b) => b.registerTime.startsWith("2024-06")).length;
-    return { total, verified, pending, thisMonth };
-  }, [buyers]);
-
-  // Active restriction lookups (auto-expire)
-  const getActiveBan = (id: string): RestrictionInfo | null => {
-    const info = banInfo[id];
-    if (!info) return null;
-    if (getRemainingDays(info.expiresAt) === -1) return null;
-    return info;
-  };
-  const getActiveSilence = (id: string): RestrictionInfo | null => {
-    const info = silenceInfo[id];
-    if (!info) return null;
-    if (getRemainingDays(info.expiresAt) === -1) return null;
-    return info;
-  };
-
-  // Filter
-  const filtered = useMemo(() => {
-    let result = [...buyers];
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      result = result.filter(
-        (b) =>
-          b.name.toLowerCase().includes(q) ||
-          b.contact.toLowerCase().includes(q) ||
-          b.email.toLowerCase().includes(q)
-      );
-    }
-    if (verifyFilter !== "all") {
-      result = result.filter((b) => b.verifyStatus === verifyFilter);
-    }
-    if (regionFilter !== "all") {
-      result = result.filter((b) => b.region.includes(regionFilter));
-    }
-    return result;
-  }, [buyers, search, verifyFilter, regionFilter]);
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-  const pageData = filtered.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
+  // Fetch buyers with pagination + debounced search
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    page,
+    total,
+    lastPage,
+    setPage,
+  } = useApiPaginated<Buyer>(
+    (p, pp) =>
+      adminApi.buyers({
+        page: p,
+        per_page: pp,
+        search: debouncedSearch.trim() || undefined,
+      }) as Promise<PaginatedResponse<Buyer>>,
+    PAGE_SIZE,
+    { deps: [debouncedSearch] }
   );
 
-  const openRestrictionDialog = (type: "ban" | "silence", buyer: AdminBuyer) => {
-    setDialogType(type);
-    setDialogTarget(buyer);
-    setDialogDuration(1);
-    setDialogReason("");
+  // Debounce search input (400ms) and reset to page 1 when it changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search, setPage]);
+
+  // Mutations
+  const banMutation = useApiMutation(
+    (params: { id: string; reason: string; duration: string }) =>
+      adminApi.banBuyer(params.id, params.reason, params.duration)
+  );
+  const unbanMutation = useApiMutation((id: string) =>
+    adminApi.unbanBuyer(id)
+  );
+
+  // Client-side verify filter on the current page (the backend list API
+  // does not expose an email_verified param, so we narrow the visible page)
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    if (verifyFilter === "all") return data;
+    return data.filter((b) =>
+      verifyFilter === "verified" ? b.email_verified === 1 : b.email_verified === 0
+    );
+  }, [data, verifyFilter]);
+
+  const buyers = filteredData;
+
+  // Stats — total is accurate (from meta), the rest reflect the current page
+  const stats = useMemo(() => {
+    const list = data ?? [];
+    const verified = list.filter((b) => b.email_verified === 1).length;
+    const banned = list.filter((b) => getBanStatus(b).isBanned).length;
+    const active = list.filter(
+      (b) => !getBanStatus(b).isBanned && b.is_active === 1
+    ).length;
+    return { total, verified, banned, active };
+  }, [data, total]);
+
+  // ===== Action Handlers =====
+
+  const openBanDialog = (buyer: Buyer) => {
+    setBanTarget(buyer);
+    setBanDuration("1");
+    setBanReason("");
   };
 
-  const handleRestrictionConfirm = () => {
-    if (!dialogTarget || !dialogType) return;
-    const now = new Date();
-    const appliedAt = now.toISOString();
-    const expiresAt =
-      dialogDuration === 0
-        ? null
-        : new Date(now.getTime() + dialogDuration * 24 * 60 * 60 * 1000).toISOString();
-    const record: RestrictionInfo = {
-      targetId: dialogTarget.id,
-      duration: dialogDuration,
-      appliedAt,
-      expiresAt,
-      reason: dialogReason || "未填写原因",
-    };
-    if (dialogType === "ban") {
-      setBanInfo((prev) => ({ ...prev, [dialogTarget.id]: record }));
-      setBuyers((prev) =>
-        prev.map((b) =>
-          b.id === dialogTarget.id ? { ...b, status: "suspended" } : b
-        )
+  const handleBanConfirm = async () => {
+    if (!banTarget) return;
+    const id = banTarget.id;
+    setActionLoading(id);
+    try {
+      await banMutation.mutate({
+        id,
+        reason: banReason || "未填写原因",
+        duration: banDuration,
+      });
+      setBanTarget(null);
+      setBanReason("");
+      await refetch();
+      alert(
+        banDuration === "permanent"
+          ? "已永久禁止该采购商"
+          : `已禁止该采购商 ${banDuration} 天`
       );
-    } else {
-      setSilenceInfo((prev) => ({ ...prev, [dialogTarget.id]: record }));
+    } catch (err) {
+      alert(
+        "操作失败：" + (err instanceof Error ? err.message : "未知错误")
+      );
+    } finally {
+      setActionLoading(null);
     }
-    const label = dialogType === "ban" ? "禁止登录" : "禁言";
-    alert(
-      dialogDuration === 0
-        ? `已永久${label}该采购商`
-        : `已${label}该采购商 ${dialogDuration} 天`
-    );
-    setDialogType(null);
-    setDialogTarget(null);
-    setDialogReason("");
   };
 
-  const handleLiftBan = (id: string) => {
-    setBanInfo((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    setBuyers((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: "active" } : b))
-    );
-    alert("已解除禁止登录");
-  };
-
-  const handleLiftSilence = (id: string) => {
-    setSilenceInfo((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    alert("已解除禁言");
+  const handleUnban = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await unbanMutation.mutate(id);
+      await refetch();
+      alert("已解除禁止");
+    } catch (err) {
+      alert(
+        "操作失败：" + (err instanceof Error ? err.message : "未知错误")
+      );
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const resetFilters = () => {
     setSearch("");
     setVerifyFilter("all");
-    setRegionFilter("all");
-    setCurrentPage(1);
+    setPage(1);
   };
 
-  const hasActiveFilters = search || verifyFilter !== "all" || regionFilter !== "all";
+  const hasActiveFilters = !!search || verifyFilter !== "all";
 
   const statCards = [
     { label: "总采购商", value: stats.total, icon: Users, color: "text-brand-600", bg: "bg-brand-50" },
     { label: "已认证", value: stats.verified, icon: UserCheck, color: "text-brand-600", bg: "bg-brand-50" },
-    { label: "待审核", value: stats.pending, icon: Clock, color: "text-gold-600", bg: "bg-gold-50" },
-    { label: "本月新增", value: stats.thisMonth, icon: UserPlus, color: "text-trust-600", bg: "bg-trust-50" },
+    { label: "已封禁", value: stats.banned, icon: Ban, color: "text-red-600", bg: "bg-red-50" },
+    { label: "正常运营", value: stats.active, icon: ShieldCheck, color: "text-slate-500", bg: "bg-slate-100" },
   ];
 
   return (
@@ -415,7 +319,6 @@ function BuyerManagementContent() {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setCurrentPage(1);
               }}
               className="pl-9 h-9"
             />
@@ -425,7 +328,6 @@ function BuyerManagementContent() {
             value={verifyFilter}
             onValueChange={(v) => {
               setVerifyFilter(v || "all");
-              setCurrentPage(1);
             }}
           >
             <SelectTrigger className="h-9 w-36 text-sm">
@@ -433,25 +335,6 @@ function BuyerManagementContent() {
             </SelectTrigger>
             <SelectContent>
               {verifyOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={regionFilter}
-            onValueChange={(v) => {
-              setRegionFilter(v || "all");
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="h-9 w-32 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {regionOptions.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
@@ -469,110 +352,107 @@ function BuyerManagementContent() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/50 border-b border-slate-200">
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">企业名称</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">联系人</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">邮箱</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">地区</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">询盘数</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">认证状态</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">账户状态</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">消息状态</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">注册时间</th>
-                <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="text-center py-12 text-slate-400">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                    暂无符合条件的采购商
-                  </td>
-                </tr>
-              ) : (
-                pageData.map((buyer) => {
-                  const vc = verifyConfig[buyer.verifyStatus];
-                  const activeBan = getActiveBan(buyer.id);
-                  const banRemaining = activeBan
-                    ? getRemainingDays(activeBan.expiresAt)
-                    : null;
-                  const activeSilence = getActiveSilence(buyer.id);
-                  const silenceRemaining = activeSilence
-                    ? getRemainingDays(activeSilence.expiresAt)
-                    : null;
-                  return (
-                    <tr key={buyer.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                      {/* Name */}
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-slate-900">{buyer.name}</span>
-                      </td>
-                      {/* Contact */}
-                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{buyer.contact}</td>
-                      {/* Email */}
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 text-slate-600 text-xs">
-                          <Mail className="h-3 w-3 text-slate-400" />
-                          {buyer.email}
-                        </span>
-                      </td>
-                      {/* Region */}
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 text-slate-600 whitespace-nowrap">
-                          <MapPin className="h-3 w-3 text-slate-400" />
-                          {buyer.region}
-                        </span>
-                      </td>
-                      {/* Inquiry Count */}
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 text-slate-600">
-                          <span className="font-medium text-slate-900">{buyer.inquiryCount}</span>
-                          条
-                        </span>
-                      </td>
-                      {/* Verify Status */}
-                      <td className="px-4 py-3">
-                        <Badge className={vc.className}>{vc.label}</Badge>
-                      </td>
-                      {/* Account Status (ban) */}
-                      <td className="px-4 py-3">
-                        {activeBan ? (
-                          <Badge className="bg-red-100 text-red-700">
-                            {banRemaining === 0
-                              ? "永久禁止"
-                              : `已禁止 (剩余 ${banRemaining}天)`}
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-brand-100 text-brand-700">正常</Badge>
-                        )}
-                      </td>
-                      {/* Messaging Status (silence) */}
-                      <td className="px-4 py-3">
-                        {activeSilence ? (
-                          <Badge className="bg-gold-100 text-gold-700">
-                            {silenceRemaining === 0
-                              ? "永久禁言"
-                              : `已禁言 (剩余 ${silenceRemaining}天)`}
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-brand-100 text-brand-700">正常</Badge>
-                        )}
-                      </td>
-                      {/* Register Time */}
-                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{buyer.registerTime}</td>
-                      {/* Actions */}
-                      <td className="px-4 py-3">
-                        {hasPermission("buyers.suspend") ? (
-                          <div className="flex flex-col gap-1.5">
-                            {activeBan ? (
+        {loading ? (
+          <LoadingSpinner text="加载采购商数据中..." />
+        ) : error ? (
+          <ErrorDisplay error={error} onRetry={refetch} />
+        ) : buyers.length === 0 ? (
+          <EmptyState
+            title="暂无符合条件的采购商"
+            description="尝试调整筛选条件或稍后重试"
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-slate-200">
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">企业名称</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">联系邮箱</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">联系电话</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">邮箱认证</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">账户状态</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">注册时间</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {buyers.map((buyer) => {
+                    const banStatus = getBanStatus(buyer);
+                    const verified = buyer.email_verified === 1;
+                    const isLoading = actionLoading === buyer.id;
+                    return (
+                      <tr key={buyer.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                        {/* Name */}
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-slate-900">
+                            {buyer.company_name || buyer.name}
+                          </div>
+                          {buyer.company_name && (
+                            <div className="text-xs text-slate-400">
+                              联系人：{buyer.name}
+                            </div>
+                          )}
+                        </td>
+                        {/* Email */}
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1 text-slate-600 text-xs">
+                            <Mail className="h-3 w-3 text-slate-400" />
+                            {buyer.email}
+                          </span>
+                        </td>
+                        {/* Phone */}
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                          {buyer.phone ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-slate-400" />
+                              {buyer.phone}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        {/* Email Verified */}
+                        <td className="px-4 py-3">
+                          {verified ? (
+                            <Badge className="bg-brand-100 text-brand-700">已认证</Badge>
+                          ) : (
+                            <Badge className="bg-muted text-muted-foreground">未认证</Badge>
+                          )}
+                        </td>
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          {banStatus.isBanned ? (
+                            <div className="flex flex-col gap-1">
+                              <Badge className="bg-red-100 text-red-700">
+                                {banStatus.isPermanent
+                                  ? "永久禁止"
+                                  : `已禁止 (剩余 ${banStatus.remainingDays}天)`}
+                              </Badge>
+                              {buyer.ban_reason && (
+                                <span className="text-xs text-slate-400">
+                                  原因：{buyer.ban_reason}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge className="bg-brand-100 text-brand-700">正常</Badge>
+                          )}
+                        </td>
+                        {/* Register Time */}
+                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                          {formatDateTime(buyer.created_at)}
+                        </td>
+                        {/* Actions */}
+                        <td className="px-4 py-3">
+                          {hasPermission("buyers.suspend") ? (
+                            banStatus.isBanned ? (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="gap-1 h-8"
-                                onClick={() => handleLiftBan(buyer.id)}
+                                disabled={isLoading}
+                                onClick={() => handleUnban(buyer.id)}
                               >
                                 <Unlock className="h-3.5 w-3.5" />
                                 解除禁止
@@ -582,162 +462,132 @@ function BuyerManagementContent() {
                                 size="sm"
                                 variant="destructive"
                                 className="gap-1 h-8"
-                                onClick={() => openRestrictionDialog("ban", buyer)}
+                                disabled={isLoading}
+                                onClick={() => openBanDialog(buyer)}
                               >
                                 <Ban className="h-3.5 w-3.5" />
                                 禁止登录
                               </Button>
-                            )}
-                            {activeSilence ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1 h-8"
-                                onClick={() => handleLiftSilence(buyer.id)}
-                              >
-                                <MessageSquare className="h-3.5 w-3.5" />
-                                解除禁言
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1 h-8 border-gold-200 text-gold-700 hover:bg-gold-50"
-                                onClick={() => openRestrictionDialog("silence", buyer)}
-                              >
-                                <MessageSquareOff className="h-3.5 w-3.5" />
-                                禁言
-                              </Button>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            )
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-          <span className="text-sm text-slate-500">
-            共 <span className="font-medium text-slate-700">{filtered.length}</span> 条
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={safePage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
-                  safePage === page
-                    ? "bg-brand-600 text-white font-medium"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={safePage >= totalPages}
-              onClick={() => setCurrentPage((p) => p + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <span className="text-sm text-slate-500">
+                共 <span className="font-medium text-slate-700">{total}</span> 条
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: lastPage }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
+                      page === p
+                        ? "bg-brand-600 text-white font-medium"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Restriction Dialog (ban / silence) */}
-      {dialogTarget && dialogType && (
+      {/* Ban Dialog */}
+      {banTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/40"
-            onClick={() => setDialogType(null)}
+            onClick={() => setBanTarget(null)}
           />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <div className="flex items-center gap-2 mb-4">
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  dialogType === "ban" ? "bg-red-50" : "bg-gold-50"
-                }`}
-              >
-                {dialogType === "ban" ? (
-                  <Ban className="h-4 w-4 text-red-600" />
-                ) : (
-                  <MessageSquareOff className="h-4 w-4 text-gold-600" />
-                )}
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                <Ban className="h-4 w-4 text-red-600" />
               </div>
               <h3 className="text-base font-semibold text-slate-900">
-                {dialogType === "ban" ? "禁止登录" : "禁言"}采购商
+                禁止登录采购商
               </h3>
             </div>
             <p className="text-sm text-slate-500 mb-1">
               企业：
               <span className="font-medium text-slate-700">
-                {dialogTarget.name}
+                {banTarget.company_name || banTarget.name}
               </span>
             </p>
             <p className="text-sm text-slate-500 mb-3">
               联系人：
-              <span className="text-slate-700">{dialogTarget.contact}</span>
+              <span className="text-slate-700">{banTarget.name}</span>
             </p>
             <label className="text-sm font-medium text-slate-700 mb-1.5 block">
-              {dialogType === "ban" ? "禁止登录时长" : "禁言时长"}{" "}
-              <span className="text-red-500">*</span>
+              禁止登录时长 <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2 mb-4">
-              {restrictionDurationOptions.map((opt) => (
+              {banDurationOptions.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => setDialogDuration(opt.value)}
+                  onClick={() => setBanDuration(opt.value)}
                   className={`h-9 rounded-md text-sm border transition-colors ${
-                    dialogDuration === opt.value
-                      ? dialogType === "ban"
-                        ? "bg-red-600 border-red-600 text-white"
-                        : "bg-gold-600 border-gold-600 text-white"
+                    banDuration === opt.value
+                      ? "bg-red-600 border-red-600 text-white"
                       : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  {opt.value === 0 ? "永久" : `${opt.label}`}
+                  {opt.label}
                 </button>
               ))}
             </div>
             <label className="text-sm font-medium text-slate-700 mb-1.5 block">
-              {dialogType === "ban" ? "禁止原因" : "禁言原因"}
+              禁止原因
             </label>
             <Textarea
-              placeholder="请输入原因（选填）"
-              value={dialogReason}
-              onChange={(e) => setDialogReason(e.target.value)}
+              placeholder="请输入禁止原因（选填）"
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
               rows={3}
               className="resize-none"
             />
             <div className="flex items-center justify-end gap-2 mt-4">
-              <Button variant="outline" size="sm" onClick={() => setDialogType(null)}>
+              <Button variant="outline" size="sm" onClick={() => setBanTarget(null)}>
                 取消
               </Button>
               <Button
                 size="sm"
-                variant={dialogType === "ban" ? "destructive" : "outline"}
-                onClick={handleRestrictionConfirm}
+                variant="destructive"
+                disabled={banMutation.loading}
+                onClick={handleBanConfirm}
               >
                 <X className="h-3.5 w-3.5" />
-                确认{dialogType === "ban" ? "禁止" : "禁言"}
+                确认禁止
               </Button>
             </div>
           </div>

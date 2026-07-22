@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeImage } from "@/components/shared/SafeImage";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin } from "lucide-react";
@@ -20,7 +20,7 @@ export function ProjectsSection() {
               className="group relative rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
             >
               <div className="relative aspect-[16/9]">
-                <Image
+                <SafeImage
                   src={project.image}
                   alt={project.title}
                   fill

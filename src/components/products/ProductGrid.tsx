@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
+import { SafeImage } from "@/components/shared/SafeImage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import { MessageSquare, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import type { Product } from "@/lib/data";
 import { ProductCard } from "@/components/shared/ProductCard";
+import Link from "next/link";
 import type { ViewMode } from "./ProductSortBar";
 
 interface ProductListRowProps {
@@ -14,9 +15,9 @@ interface ProductListRowProps {
 
 function ProductListRow({ product }: ProductListRowProps) {
   return (
-    <div className="group bg-white rounded-xl border shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col sm:flex-row">
+    <Link href={`/product?id=${product.skuCode || product.id}`} className="block group bg-white rounded-xl border shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col sm:flex-row">
       <div className="relative w-full sm:w-48 h-48 sm:h-auto shrink-0 overflow-hidden bg-muted">
-        <Image
+        <SafeImage
           src={product.image}
           alt={product.name}
           fill
@@ -25,6 +26,12 @@ function ProductListRow({ product }: ProductListRowProps) {
         <Badge className="absolute top-3 left-3 bg-brand-600 hover:bg-brand-700 text-white">
           {product.certType}
         </Badge>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center pointer-events-none">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white text-sm font-medium bg-brand-700/90 px-4 py-2 rounded-lg flex items-center gap-1">
+            查看详情
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 p-4 flex flex-col sm:flex-row gap-4">
@@ -97,7 +104,7 @@ function ProductListRow({ product }: ProductListRowProps) {
           </Button>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -234,7 +241,7 @@ export function ProductGrid({
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {pageProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} linkable />
           ))}
         </div>
       ) : (

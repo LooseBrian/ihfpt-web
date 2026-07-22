@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+// Admin Logs Page - displays platform operation logs with filtering and pagination
+
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   ScrollText,
@@ -11,9 +13,14 @@ import {
   PlusCircle,
   Pencil,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGuard } from "@/components/admin/AdminGuard";
+import { adminApi } from "@/lib/api-client";
+import { useApiPaginated } from "@/lib/use-api";
+import { LoadingSpinner, ErrorDisplay, EmptyState } from "@/lib/use-api-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,161 +30,150 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  roleLabels,
-  roleColors,
-  type AdminRole,
-} from "@/lib/admin-auth-context";
 import { cn } from "@/lib/utils";
 
 // ===== Types =====
 
-type LogAction = "登录" | "审核" | "创建" | "修改" | "删除";
-
-interface LogEntry {
+interface AdminLog {
   id: string;
-  time: string;
-  operator: string;
-  role: AdminRole;
-  action: LogAction;
-  content: string;
-  ip: string;
+  admin_id: string;
+  admin_name: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  detail: string | null;
+  ip_address: string;
+  user_agent: string | null;
+  created_at: string;
 }
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
+const PAGE_SIZE = 10;
 
 // ===== Constants =====
 
-const actionTypes: LogAction[] = ["登录", "审核", "创建", "修改", "删除"];
-
-const actionMeta: Record<
-  LogAction,
-  { badge: string; icon: typeof LogIn }
-> = {
-  登录: { badge: "bg-trust-100 text-trust-700", icon: LogIn },
-  审核: { badge: "bg-gold-100 text-gold-700", icon: CheckCircle2 },
-  创建: { badge: "bg-brand-100 text-brand-700", icon: PlusCircle },
-  修改: { badge: "bg-purple-100 text-purple-700", icon: Pencil },
-  删除: { badge: "bg-red-100 text-red-700", icon: Trash2 },
-};
-
-// ===== Seed data =====
-
-const seedLogs: LogEntry[] = [
-  {
-    id: "LOG-20260714-0001",
-    time: "2026-07-14 08:30:12",
-    operator: "系统管理员",
-    role: "super_admin",
-    action: "登录",
-    content: "用户登录管理后台",
-    ip: "112.45.88.102",
-  },
-  {
-    id: "LOG-20260714-0002",
-    time: "2026-07-14 09:02:45",
-    operator: "审核员王工",
-    role: "auditor",
-    action: "审核",
-    content: "产品审核通过：清真冷冻羊腿肉（分割）SKU-2026-0382",
-    ip: "58.20.115.66",
-  },
-  {
-    id: "LOG-20260714-0003",
-    time: "2026-07-14 09:15:30",
-    operator: "运营张经理",
-    role: "operations_manager",
-    action: "审核",
-    content: "供应商资质审核通过：宁夏伊品清真食品有限公司",
-    ip: "112.45.88.230",
-  },
-  {
-    id: "LOG-20260714-0004",
-    time: "2026-07-14 10:05:18",
-    operator: "编辑小李",
-    role: "content_editor",
-    action: "创建",
-    content: "资讯发布：2026年全球清真食品市场规模预计突破2.3万亿美元",
-    ip: "120.78.44.91",
-  },
-  {
-    id: "LOG-20260714-0005",
-    time: "2026-07-14 10:22:09",
-    operator: "系统管理员",
-    role: "super_admin",
-    action: "修改",
-    content: "修改系统配置：供应商入驻审核周期由7天调整为3天",
-    ip: "112.45.88.102",
-  },
-  {
-    id: "LOG-20260714-0006",
-    time: "2026-07-14 11:10:55",
-    operator: "运营张经理",
-    role: "operations_manager",
-    action: "审核",
-    content: "产品审核驳回：速冻水饺（猪肉馅）— 含非清真原料，驳回",
-    ip: "112.45.88.230",
-  },
-  {
-    id: "LOG-20260714-0007",
-    time: "2026-07-14 11:48:33",
-    operator: "编辑小李",
-    role: "content_editor",
-    action: "创建",
-    content: "新增Banner：斋月备货专区（首页轮播）",
-    ip: "120.78.44.91",
-  },
-  {
-    id: "LOG-20260713-0008",
-    time: "2026-07-13 16:20:40",
-    operator: "审核员王工",
-    role: "auditor",
-    action: "审核",
-    content: "产品审核通过：清真咖喱预制菜 SKU-2026-0291",
-    ip: "58.20.115.66",
-  },
-  {
-    id: "LOG-20260713-0009",
-    time: "2026-07-13 17:42:11",
-    operator: "系统管理员",
-    role: "super_admin",
-    action: "删除",
-    content: "删除违规产品：非清真标识肉类产品 SKU-2026-0102",
-    ip: "112.45.88.102",
-  },
-  {
-    id: "LOG-20260713-0010",
-    time: "2026-07-13 15:05:27",
-    operator: "刘总监",
-    role: "operations_manager",
-    action: "修改",
-    content: "修改询盘状态：询盘 INQ-2026-0512 关闭",
-    ip: "112.45.88.230",
-  },
-  {
-    id: "LOG-20260712-0011",
-    time: "2026-07-12 11:08:50",
-    operator: "观察员赵老师",
-    role: "viewer",
-    action: "登录",
-    content: "用户登录管理后台（只读）",
-    ip: "36.110.50.78",
-  },
-  {
-    id: "LOG-20260712-0012",
-    time: "2026-07-12 14:33:19",
-    operator: "系统管理员",
-    role: "super_admin",
-    action: "创建",
-    content: "新增用户：周审核（审核部）",
-    ip: "112.45.88.102",
-  },
+const actionOptions = [
+  { value: "login", label: "登录" },
+  { value: "logout", label: "登出" },
+  { value: "create", label: "创建" },
+  { value: "update", label: "修改" },
+  { value: "delete", label: "删除" },
+  { value: "approve", label: "审核通过" },
+  { value: "reject", label: "审核驳回" },
 ];
+
+// ===== Helpers =====
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  } catch {
+    return iso;
+  }
+}
+
+function getActionMeta(
+  action: string
+): { badge: string; icon: typeof LogIn; label: string } {
+  const a = (action || "").toLowerCase();
+  if (a.includes("login")) {
+    return { badge: "bg-trust-100 text-trust-700", icon: LogIn, label: "登录" };
+  }
+  if (a.includes("logout")) {
+    return { badge: "bg-slate-100 text-slate-600", icon: LogIn, label: "登出" };
+  }
+  if (a.includes("reject")) {
+    return {
+      badge: "bg-red-100 text-red-700",
+      icon: CheckCircle2,
+      label: "驳回",
+    };
+  }
+  if (a.includes("approve") || a.includes("audit") || a.includes("verify")) {
+    return {
+      badge: "bg-gold-100 text-gold-700",
+      icon: CheckCircle2,
+      label: "审核",
+    };
+  }
+  if (
+    a.includes("create") ||
+    a.includes("store") ||
+    a.includes("publish") ||
+    a.includes("add")
+  ) {
+    return {
+      badge: "bg-brand-100 text-brand-700",
+      icon: PlusCircle,
+      label: "创建",
+    };
+  }
+  if (
+    a.includes("update") ||
+    a.includes("edit") ||
+    a.includes("patch") ||
+    a.includes("modify")
+  ) {
+    return {
+      badge: "bg-purple-100 text-purple-700",
+      icon: Pencil,
+      label: "修改",
+    };
+  }
+  if (
+    a.includes("delete") ||
+    a.includes("remove") ||
+    a.includes("destroy") ||
+    a.includes("ban")
+  ) {
+    return {
+      badge: "bg-red-100 text-red-700",
+      icon: Trash2,
+      label: "删除",
+    };
+  }
+  return {
+    badge: "bg-slate-100 text-slate-600",
+    icon: ScrollText,
+    label: action || "未知",
+  };
+}
+
+function isToday(iso: string | null): boolean {
+  if (!iso) return false;
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  } catch {
+    return false;
+  }
+}
 
 // ===== Page =====
 
 export default function LogsPage() {
   return (
     <AdminLayout>
-      <AdminGuard requiredPermissions={["settings.system", "settings.logs"]}>
+      <AdminGuard requiredPermission="settings.logs">
         <LogsContent />
       </AdminGuard>
     </AdminLayout>
@@ -186,41 +182,82 @@ export default function LogsPage() {
 
 function LogsContent() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const filtered = useMemo(() => {
-    return seedLogs.filter((log) => {
-      const matchSearch =
-        !search ||
-        log.operator.toLowerCase().includes(search.toLowerCase()) ||
-        log.content.toLowerCase().includes(search.toLowerCase()) ||
-        log.ip.includes(search);
-      const matchAction =
-        actionFilter === "all" || log.action === actionFilter;
-      const logDate = log.time.slice(0, 10);
-      const matchFrom = !dateFrom || logDate >= dateFrom;
-      const matchTo = !dateTo || logDate <= dateTo;
-      return matchSearch && matchAction && matchFrom && matchTo;
-    });
-  }, [search, actionFilter, dateFrom, dateTo]);
+  // ===== Fetch logs (paginated, backend handles action + date filters) =====
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    page,
+    total,
+    lastPage,
+    setPage,
+  } = useApiPaginated<AdminLog>(
+    (p, pp) =>
+      adminApi.logs({
+        page: p,
+        per_page: pp,
+        action: actionFilter === "all" ? undefined : actionFilter,
+        start_date: dateFrom || undefined,
+        end_date: dateTo || undefined,
+      }) as Promise<PaginatedResponse<AdminLog>>,
+    PAGE_SIZE,
+    { deps: [actionFilter, dateFrom, dateTo] }
+  );
 
+  // ===== Debounce search input (400ms) for client-side filtering =====
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const logs = data ?? [];
+
+  // ===== Client-side search filter (backend logs API has no text search) =====
+  const filtered = useMemo(() => {
+    if (!debouncedSearch.trim()) return logs;
+    const q = debouncedSearch.toLowerCase();
+    return logs.filter(
+      (log) =>
+        log.admin_name.toLowerCase().includes(q) ||
+        (log.detail || "").toLowerCase().includes(q) ||
+        log.ip_address.includes(q) ||
+        (log.target_type || "").toLowerCase().includes(q)
+    );
+  }, [logs, debouncedSearch]);
+
+  // ===== Stats (approximate from current page + meta.total) =====
   const stats = useMemo(
     () => ({
-      total: seedLogs.length,
-      today: seedLogs.filter((l) => l.time.startsWith("2026-07-14")).length,
-      login: seedLogs.filter((l) => l.action === "登录").length,
-      audit: seedLogs.filter((l) => l.action === "审核").length,
+      total,
+      today: logs.filter((l) => isToday(l.created_at)).length,
+      login: logs.filter((l) =>
+        (l.action || "").toLowerCase().includes("login")
+      ).length,
+      audit: logs.filter(
+        (l) =>
+          (l.action || "").toLowerCase().includes("approve") ||
+          (l.action || "").toLowerCase().includes("audit") ||
+          (l.action || "").toLowerCase().includes("reject")
+      ).length,
     }),
-    []
+    [logs, total]
   );
 
   const resetFilters = () => {
     setSearch("");
+    setDebouncedSearch("");
     setActionFilter("all");
     setDateFrom("");
     setDateTo("");
+    setPage(1);
   };
 
   return (
@@ -259,16 +296,19 @@ function LogsContent() {
           <Filter className="h-4 w-4 text-slate-400" />
           <Select
             value={actionFilter}
-            onValueChange={(v) => setActionFilter(v || "all")}
+            onValueChange={(v) => {
+              setActionFilter(v || "all");
+              setPage(1);
+            }}
           >
             <SelectTrigger className="w-32">
               <SelectValue placeholder="动作类型" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部</SelectItem>
-              {actionTypes.map((a) => (
-                <SelectItem key={a} value={a}>
-                  {a}
+              {actionOptions.map((a) => (
+                <SelectItem key={a.value} value={a.value}>
+                  {a.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -279,7 +319,10 @@ function LogsContent() {
           <Input
             type="date"
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setPage(1);
+            }}
             className="w-36"
             aria-label="开始日期"
           />
@@ -287,7 +330,10 @@ function LogsContent() {
           <Input
             type="date"
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setPage(1);
+            }}
             className="w-36"
             aria-label="结束日期"
           />
@@ -299,84 +345,121 @@ function LogsContent() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs">
-                <th className="text-left font-medium px-4 py-3">时间</th>
-                <th className="text-left font-medium px-4 py-3">操作人</th>
-                <th className="text-left font-medium px-4 py-3">角色</th>
-                <th className="text-left font-medium px-4 py-3">动作类型</th>
-                <th className="text-left font-medium px-4 py-3">操作内容</th>
-                <th className="text-left font-medium px-4 py-3">IP地址</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((log) => {
-                const meta = actionMeta[log.action];
-                const ActionIcon = meta.icon;
-                return (
-                  <tr key={log.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                      {log.time}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shrink-0">
-                          {log.operator.slice(0, 1)}
-                        </div>
-                        <span className="font-medium text-slate-900">
-                          {log.operator}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "inline-block px-2 py-0.5 rounded-full text-xs font-medium",
-                          roleColors[log.role]
-                        )}
-                      >
-                        {roleLabels[log.role]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
-                          meta.badge
-                        )}
-                      >
-                        <ActionIcon className="h-3 w-3" />
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 max-w-[360px]">
-                      {log.content}
-                    </td>
-                    <td className="px-4 py-3">
-                      <code className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                        {log.ip}
-                      </code>
-                    </td>
+        {loading ? (
+          <LoadingSpinner text="加载日志中..." />
+        ) : error ? (
+          <ErrorDisplay error={error} onRetry={refetch} />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title={logs.length === 0 ? "暂无日志记录" : "当前页没有匹配的日志"}
+            description={
+              logs.length === 0
+                ? "还没有任何操作日志记录"
+                : "尝试调整筛选条件或搜索关键词"
+            }
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs">
+                    <th className="text-left font-medium px-4 py-3">时间</th>
+                    <th className="text-left font-medium px-4 py-3">操作人</th>
+                    <th className="text-left font-medium px-4 py-3">动作类型</th>
+                    <th className="text-left font-medium px-4 py-3">操作内容</th>
+                    <th className="text-left font-medium px-4 py-3">IP地址</th>
                   </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
-                    暂无匹配的日志记录
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length > 0 && (
-          <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-400 flex items-center justify-between">
-            <span>共 {filtered.length} 条记录</span>
-            <span>日志保留期：180天</span>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((log) => {
+                    const meta = getActionMeta(log.action);
+                    const ActionIcon = meta.icon;
+                    return (
+                      <tr key={log.id} className="hover:bg-slate-50/60">
+                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
+                          {formatDateTime(log.created_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shrink-0">
+                              {(log.admin_name || "?").slice(0, 1)}
+                            </div>
+                            <span className="font-medium text-slate-900">
+                              {log.admin_name || "未知"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                              meta.badge
+                            )}
+                          >
+                            <ActionIcon className="h-3 w-3" />
+                            {meta.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 max-w-[360px]">
+                          {log.detail || "—"}
+                          {log.target_type && (
+                            <span className="block text-xs text-slate-400 mt-0.5">
+                              目标：{log.target_type}
+                              {log.target_id ? ` #${log.target_id}` : ""}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <code className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                            {log.ip_address || "—"}
+                          </code>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+              <span className="text-sm text-slate-500">
+                共 <span className="font-medium text-slate-700">{total}</span> 条
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: lastPage }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[28px] h-7 px-2 rounded-md text-sm transition-colors ${
+                      page === p
+                        ? "bg-brand-600 text-white font-medium"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page >= lastPage}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

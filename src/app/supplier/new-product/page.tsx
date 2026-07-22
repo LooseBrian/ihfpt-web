@@ -52,6 +52,7 @@ import { Footer } from "@/components/layout/Footer";
 import { useAuth } from "@/lib/auth-context";
 import { useProducts } from "@/lib/product-context";
 import { hasSensitiveContent, checkSensitive } from "@/lib/sensitive-words";
+import { userApi, ApiError } from "@/lib/api-client";
 
 // ===== Static data =====
 
@@ -108,7 +109,7 @@ function NewProductPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { addProduct, updateProduct, getProductById } = useProducts();
+  const { addProduct, updateProduct, getProductById, loading: productsLoading } = useProducts();
   const editId = searchParams.get("edit");
   const isEditing = !!editId;
 
@@ -168,7 +169,7 @@ function NewProductPageContent() {
 
   // ===== Load product for edit mode =====
   useEffect(() => {
-    if (editId) {
+    if (editId && !productsLoading) {
       const product = getProductById(editId);
       if (product) {
         // Prefill form fields from loaded product data
@@ -210,10 +211,16 @@ function NewProductPageContent() {
           setMoqUnit(unit);
         }
 
-        // Load images
-        if (product.images && product.images.length > 0) {
+        // Load images — fall back to [product.image] if images array not present
+        const imageUrls =
+          product.images && product.images.length > 0
+            ? product.images
+            : product.image
+              ? [product.image]
+              : [];
+        if (imageUrls.length > 0) {
           setImages(
-            product.images.map((url, idx) => ({
+            imageUrls.map((url, idx) => ({
               id: `img-${idx}`,
               url,
               size: 0,
@@ -238,7 +245,7 @@ function NewProductPageContent() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editId, getProductById]);
+  }, [editId, getProductById, productsLoading]);
 
   // ===== Derived values =====
   const selectedCategory = categories.find((c) => c.value === category);
@@ -285,7 +292,7 @@ function NewProductPageContent() {
     setter(arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item]);
   };
 
-  const handleSubmit = (action: "draft" | "submit") => {
+  const handleSubmit = async (action: "draft" | "submit") => {
     // Sensitive word check on description
     if (description && hasSensitiveContent(description)) {
       const matches = checkSensitive(description);
@@ -295,21 +302,78 @@ function NewProductPageContent() {
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
 
-      const priceRangeStr = priceRange ? `${currency.split(" ")[0]} ${priceRange} / ${priceUnit}` : "面议";
-      const moqStr = moq ? `${moq} ${moqUnit}` : "面议";
+    try {
+      // Map frontend category name to backend category_id
+      const categoryMap: Record<string, number> = {
+        "清真预制菜": 1,
+        "牛羊肉制品": 2,
+        "清真肉制品": 2,
+        "清真零食": 3,
+        "速冻调理品": 3,
+        "调味料": 4,
+        "清真调味品": 4,
+        "速冻面点": 5,
+        "清真烘焙": 5,
+      };
+      const categoryId = categoryMap[category] || undefined;
+
+      // Determine halal cert type from certBody
+      const certBodyMap: Record<string, string> = {
+        JAKIM: "JAKIM — 马来西亚伊斯兰发展局",
+        MUI: "MUI — 印度尼西亚乌里玛委员会",
+        HCA: "HCA — 中国_halal认证机构",
+        ESMA: "ESMA — 阿联酋标准化与计量局",
+        MUIS: "MUIS — 新加坡伊斯兰宗教理事会",
+        KMF: "KMF — 韩国穆斯林联合会",
+        SC: "SC — 中国食品生产许可",
+      };
+
+      // Map storage condition label to backend value
+      const storageMap: Record<string, string> = {
+        "常温": "常温",
+        "冷藏 (0-4°C)": "冷藏 0-4°C",
+        "冷冻 (-18°C以下)": "冷冻保存 -18℃以下",
+        "阴凉干燥": "阴凉干燥",
+        "避光": "避光",
+      };
 
       const productData = {
         name: name || "未命名产品",
+        sku: model || undefined,
+        category_id: categoryId,
+        specifications: spec || undefined,
+        description: description || undefined,
+        price: priceMin ? parseFloat(priceMin) : 0,
+        unit: priceUnit || "件",
+        min_order_quantity: moq ? parseInt(moq) : 1,
+        status: action === "submit" ? "pending" as const : "draft" as const,
+        halal_cert_type: certBody
+          ? (certBodyMap[certBody] || certBody)
+          : "待补充",
+        halal_cert_number: certNumber || "待补充",
+        halal_cert_expiry: certValidTo || undefined,
+        storage_conditions: storageCondition
+          ? (storageMap[storageCondition] || storageCondition)
+          : undefined,
+        shelf_life: shelfLife || undefined,
+        origin: origin || undefined,
+      };
+
+      // Build local product data for localStorage
+      const localProductData = {
+        name: name || "未命名产品",
         nameEn,
         spec: spec || "",
-        moq: moqStr,
-        priceRange: priceRangeStr,
-        supplier: user?.name || "未知供应商",
+        moq: moq ? `${moq} ${moqUnit}` : "面议",
+        priceRange: priceMin && priceMax
+          ? `${currency.split(" ")[0]} ${priceMin} - ${priceMax} / ${priceUnit}`
+          : priceMin
+            ? `${currency.split(" ")[0]} ${priceMin} / ${priceUnit}`
+            : "面议",
+        supplier: user?.company_name || user?.name || "未知供应商",
         certType: certBody || "",
-        image: images[0]?.url || "https://loremflickr.com/120/80/food,halal",
+        image: images[0]?.url || "",
         images: images.map((img) => img.url),
         videos: videos.map((v) => ({
           url: v.url,
@@ -332,25 +396,101 @@ function NewProductPageContent() {
         services: selectedServices,
       };
 
+      // ===== Backend API sync (best-effort, won't block localStorage save) =====
+      // Check if editing a product that has a backend ID
+      const existingProduct = isEditing && editId ? getProductById(editId) : null;
+      const backendId = existingProduct?.backendId;
+      let backendWarning = "";
+      let newBackendId: number | undefined;
+
+      try {
+        if (isEditing && backendId) {
+          // Editing a product that exists in the backend — use the numeric backend ID
+          await userApi.updateProduct(String(backendId), productData);
+        } else if (isEditing && !backendId) {
+          // Editing a localStorage-only product (seed data or pre-backend) — skip backend sync
+          backendWarning = "该产品为本地数据，未同步至后端";
+        } else if (!isEditing) {
+          // Creating a new product — sync to backend and capture the returned ID
+          const result = await userApi.createProduct(productData);
+          if (result?.id) {
+            newBackendId = Number(result.id);
+          }
+        }
+      } catch (backendErr) {
+        // Backend call failed — collect message but don't block localStorage save
+        backendWarning = backendErr instanceof ApiError
+          ? backendErr.message
+          : backendErr instanceof Error
+            ? backendErr.message
+            : "后端同步失败";
+      }
+
+      // ===== Always update localStorage =====
+      // Status logic:
+      // - Submit → "pending" (needs review)
+      // - Save draft on approved product → keep "approved" (just update data, stays live)
+      // - Save draft on other statuses → "draft"
+      const previousStatus = existingProduct?.status;
+      const newStatus: "pending" | "draft" | "approved" =
+        action === "submit"
+          ? "pending"
+          : previousStatus === "approved"
+            ? "approved"
+            : "draft";
+
       if (isEditing && editId) {
+        // Don't include backendId in update — preserve existing value
         updateProduct(editId, {
-          ...productData,
-          status: action === "submit" ? "pending" : "draft",
+          ...localProductData,
+          status: newStatus,
         });
       } else {
-        const newId = addProduct(productData);
+        // For new products, include the backendId from the API response
+        const newId = addProduct({
+          ...localProductData,
+          ...(newBackendId !== undefined ? { backendId: newBackendId } : {}),
+        });
         if (action === "draft") {
           updateProduct(newId, { status: "draft" });
         }
       }
 
+      // ===== Show result message =====
       if (action === "submit") {
-        alert("产品已提交审核！平台将在 3-5 个工作日内完成审核，审核通过后将在产品大厅展示。");
+        if (backendWarning) {
+          alert(`产品已提交审核（本地保存成功）。\n\n后端同步提示：${backendWarning}\n\n如需同步至后端，请稍后重试。`);
+        } else {
+          alert("产品已提交审核！平台将在 3-5 个工作日内完成审核，审核通过后将在产品大厅展示。");
+        }
       } else {
-        alert("产品已保存为草稿，可随时在「产品管理」中继续编辑。");
+        // Different message for approved products (stays live) vs draft products
+        if (previousStatus === "approved") {
+          if (backendWarning) {
+            alert(`产品信息已更新，产品保持上架状态。\n\n后端同步提示：${backendWarning}`);
+          } else {
+            alert("产品信息已更新，产品保持上架状态。");
+          }
+        } else {
+          if (backendWarning) {
+            alert(`产品已保存为草稿（本地保存成功）。\n\n后端同步提示：${backendWarning}`);
+          } else {
+            alert("产品已保存为草稿，可随时在「产品管理」中继续编辑。");
+          }
+        }
       }
       router.push("/supplier#products");
-    }, 800);
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "提交失败，请稍后重试";
+      alert(`产品提交失败：${msg}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ===== Validation =====

@@ -1,6 +1,12 @@
+"use client";
+
 import { Bell, User, ChevronRight } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export function BuyerHero() {
+  const { user } = useAuth();
+  const displayName = user?.name || "采购商用户";
+
   return (
     <section className="relative bg-gradient-to-br from-trust-900 via-trust-700 to-trust-800 text-white py-12 md:py-16 overflow-hidden">
       <div className="container mx-auto px-4 relative z-10">
@@ -11,15 +17,20 @@ export function BuyerHero() {
               <User className="h-8 w-8 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="px-2 py-0.5 bg-trust-500 text-white text-xs font-bold rounded">
                   采购商
                 </span>
                 <span className="px-2 py-0.5 bg-white/10 text-trust-100 text-xs font-medium rounded">
                   已认证
                 </span>
+                {user?.userCode && (
+                  <span className="px-2 py-0.5 bg-white/10 text-trust-100 text-xs font-mono rounded">
+                    采购商编码: {user.userCode}
+                  </span>
+                )}
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold">欢迎回来，采购商用户</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">欢迎回来，{displayName}</h1>
               <p className="text-trust-100 text-sm mt-1">
                 印度尼西亚 · 雅加达贸易公司 · Premium Buyer
               </p>

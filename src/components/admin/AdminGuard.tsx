@@ -2,13 +2,13 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { ShieldAlert, Lock } from "lucide-react";
-import { useAdminAuth, type Permission } from "@/lib/admin-auth-context";
+import { useAdminAuth } from "@/lib/admin-auth-context";
 import { Button } from "@/components/ui/button";
 
 interface AdminGuardProps {
   children: ReactNode;
-  requiredPermission?: Permission;
-  requiredPermissions?: Permission[];
+  requiredPermission?: string;
+  requiredPermissions?: string[];
 }
 
 export function AdminGuard({

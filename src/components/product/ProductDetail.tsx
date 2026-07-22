@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { SafeImage } from "@/components/shared/SafeImage";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           {/* Left: Product Gallery (images + videos) */}
           <div className="space-y-4">
             <ProductGallery
-              images={product.images || [product.image]}
+              images={product.images?.length ? product.images : [product.image]}
               videos={product.videos}
               productName={product.name}
               isHot={product.isHot}
@@ -89,6 +89,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
           {/* Right: Product Info */}
           <div className="space-y-5">
             <div>
+              {/* SKU code — ASIN-like identifier, displayed prominently */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                  SKU: {product.skuCode || product.id}
+                </span>
+              </div>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
                 {product.name}
               </h1>
@@ -283,10 +289,10 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {relatedProducts.map((rp) => (
-                <Link key={rp.id} href={`/product/${rp.id}`}>
+                <Link key={rp.id} href={`/product?id=${rp.skuCode || rp.id}`}>
                   <div className="bg-white rounded-xl border p-3 hover:shadow-md transition-all cursor-pointer h-full">
                     <div className="relative aspect-square rounded-lg overflow-hidden bg-muted mb-2">
-                      <Image
+                      <SafeImage
                         src={rp.image}
                         alt={rp.name}
                         fill

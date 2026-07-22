@@ -152,6 +152,36 @@ export default function SuppliersPage() {
   const currentRange =
     filteredSuppliers.length > 0 ? `${startIdx}-${endIdx}` : "0";
 
+  // Handler for SupplierCategoryNav card clicks
+  const handleCategorySelect = (tabId: string, optionId: string) => {
+    const newFilters: SupplierFilters = { ...initialFilters };
+    switch (tabId) {
+      case "category":
+        newFilters.categories = [optionId];
+        break;
+      case "cert":
+        newFilters.certifications = [optionId];
+        break;
+      case "type":
+        newFilters.businessTypes = [optionId];
+        break;
+      case "belt":
+        // Map belt id to origin (location)
+        newFilters.origins = [optionId];
+        break;
+      default:
+        return;
+    }
+    setFilters(newFilters);
+    // Scroll to supplier list smoothly after state update
+    setTimeout(() => {
+      const listSection = document.getElementById("supplier-list");
+      if (listSection) {
+        listSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 100);
+  };
+
   return (
     <>
       <TopBar />
@@ -159,10 +189,10 @@ export default function SuppliersPage() {
       <main className="flex-1 bg-muted/20">
         <SupplierHero />
         <SupplierValueProps />
-        <SupplierCategoryNav />
+        <SupplierCategoryNav onSelect={handleCategorySelect} />
         <StrategicSuppliers />
 
-        <section className="py-8">
+        <section id="supplier-list" className="py-8">
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row gap-6">
               <SupplierFilterSidebar

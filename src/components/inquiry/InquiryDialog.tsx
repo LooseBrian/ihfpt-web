@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import { SafeImage } from "@/components/shared/SafeImage";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -127,7 +127,7 @@ export function InquiryDialog({ open, onClose, product }: InquiryDialogProps) {
         <div className="p-5 bg-muted/30 border-b">
           <div className="flex gap-3">
             <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0 border">
-              <Image
+              <SafeImage
                 src={product.image}
                 alt={product.name}
                 fill

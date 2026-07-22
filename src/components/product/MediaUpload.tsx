@@ -78,6 +78,55 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Convert a File to a compressed base64 data URI.
+ *
+ * This is critical for persistence: URL.createObjectURL() generates temporary
+ * blob: URLs that are invalidated on page reload. By converting to a compressed
+ * data URI, the image survives in localStorage and displays correctly on the
+ * product detail page even after the browser is closed and reopened.
+ *
+ * - Resizes to maxDim×maxDim (maintaining aspect ratio)
+ * - Compresses to JPEG at the given quality
+ * - Output is typically 30-100KB per image, well within localStorage limits
+ */
+async function fileToCompressedDataURI(file: File, maxDim = 800, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        let { width, height } = img;
+        // Scale down to fit within maxDim×maxDim, preserving aspect ratio
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height >= width && height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas 2D context unavailable"));
+          return;
+        }
+        // White background for PNG transparency → JPEG
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Failed to decode image"));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+}
+
 function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
@@ -183,9 +232,20 @@ export function MediaUpload({
         continue;
       }
 
+      // Convert to compressed base64 data URI for persistence in localStorage.
+      // blob: URLs from URL.createObjectURL() are invalidated on page reload,
+      // causing images to disappear on the product detail page.
+      let compressedUrl: string;
+      try {
+        compressedUrl = await fileToCompressedDataURI(file);
+      } catch {
+        newErrors[fileId] = "图片压缩失败，请重试";
+        continue;
+      }
+
       validImages.push({
         id: fileId,
-        url: URL.createObjectURL(file),
+        url: compressedUrl,
         file,
         width: dimensions.width,
         height: dimensions.height,

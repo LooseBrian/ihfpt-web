@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { SafeImage } from "@/components/shared/SafeImage";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export function ProductCard({ product, linkable = false }: ProductCardProps) {
   const cardContent = (
     <div className="group bg-white rounded-xl border shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col h-full">
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-        <Image
+        <SafeImage
           src={product.image}
           alt={product.name}
           fill
@@ -123,7 +123,7 @@ export function ProductCard({ product, linkable = false }: ProductCardProps) {
   if (linkable) {
     return (
       <>
-        <Link href={`/product/${product.id}`} className="block h-full">
+        <Link href={`/product?id=${product.skuCode || product.id}`} className="block h-full">
           {cardContent}
         </Link>
         {dialog}

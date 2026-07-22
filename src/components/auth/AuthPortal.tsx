@@ -19,16 +19,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
+import { generateBuyerCode } from "@/lib/code-generator";
 
 type Portal = "supplier" | "buyer";
 type Mode = "login" | "signup";
 
 export function AuthPortal() {
-  const { login } = useAuth();
+  const { login, loginWithBackend } = useAuth();
   const [portal, setPortal] = useState<Portal>("supplier");
   const [mode, setMode] = useState<Mode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [authError, setAuthError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // Read query params on mount
   useEffect(() => {
@@ -114,51 +117,66 @@ export function AuthPortal() {
   const Icon = config.icon;
   const isSupplier = portal === "supplier";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError("");
+
     if (mode === "login") {
       const params = new URLSearchParams(window.location.search);
       const redirectTo = params.get("redirect");
       const accountField = config.loginFields[0];
       const account = formData[accountField.label] || "";
+      const passwordField = config.loginFields[1];
+      const password = formData[passwordField.label] || "";
 
-      // Determine display name and email based on account input
-      let displayName: string;
-      let email: string;
-
-      if (isSupplier) {
-        // Supplier test account: huifa → 惠发食品有限公司
-        const lowerAccount = account.toLowerCase().trim();
-        if (lowerAccount === "huifa" || lowerAccount.includes("惠发")) {
-          displayName = "惠发食品有限公司";
-          email = account.includes("@") ? account : "huifa@ihf.org";
-        } else if (account.includes("@")) {
-          // Use email prefix as company name + 有限公司
-          displayName = `${account.split("@")[0]}有限公司`;
-          email = account;
-        } else {
-          displayName = account ? `${account}有限公司` : "供应商用户";
-          email = "supplier@ihf.org";
-        }
-      } else {
-        // Buyer
-        if (account.includes("@")) {
-          displayName = account.split("@")[0];
-          email = account;
-        } else {
-          displayName = account || "采购商用户";
-          email = "buyer@ihf.org";
-        }
+      if (!account || !password) {
+        setAuthError("请填写账号和密码");
+        return;
       }
 
+      // Determine email: if account doesn't include @, use demo domain
+      const email = account.includes("@")
+        ? account
+        : `${account}@ihf-demo.com`;
+
+      setSubmitting(true);
+
+      if (isSupplier) {
+        // Supplier: use backend JWT login
+        const success = await loginWithBackend(email, password);
+        setSubmitting(false);
+
+        if (success) {
+          window.location.href = redirectTo || "/supplier";
+          return;
+        }
+
+        setAuthError("登录失败，请检查邮箱和密码是否正确。测试账号：huifa@ihf-demo.com / supplier123");
+        return;
+      }
+
+      // Buyer: fallback to mock login (buyer backend not ready)
+      let displayName: string;
+      if (account.includes("@")) {
+        displayName = account.split("@")[0];
+      } else {
+        displayName = account || "采购商用户";
+      }
       login({
-        type: portal,
+        type: "buyer",
         name: displayName,
         email,
-        role: isSupplier ? "金牌工厂" : "已认证",
+        role: "已认证",
+        // Generate a temporary ASIN-like buyer code (`BR` + 8 chars) for the
+        // mock session so the buyer dashboard can display a code.
+        userCode: generateBuyerCode(),
       });
-      window.location.href = redirectTo || (isSupplier ? "/supplier" : "/buyer");
+      window.location.href = redirectTo || "/buyer";
+      return;
     }
+
+    // Signup mode — not yet connected to backend
+    setSubmitting(false);
   };
 
   const updateField = (label: string, value: string) => {
@@ -368,16 +386,24 @@ export function AuthPortal() {
                     </div>
                   )}
 
+                  {/* Auth error message */}
+                  {authError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+                      {authError}
+                    </div>
+                  )}
+
                   {/* Submit */}
                   <Button
                     type="submit"
+                    disabled={submitting}
                     className={`w-full h-11 font-semibold shadow-sm ${
                       isSupplier
                         ? "bg-gold-500 hover:bg-gold-600 text-brand-900"
                         : "bg-trust-500 hover:bg-trust-600 text-white"
                     }`}
                   >
-                    {config.ctaText}
+                    {submitting ? "登录中..." : config.ctaText}
                   </Button>
 
                   {/* Mode toggle link */}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { IMAGE_PLACEHOLDER_DATAURI } from "@/lib/product-images";
 import {
   Store,
   Edit,
@@ -814,6 +815,9 @@ export function SupplierStore() {
                           src={product.image}
                           alt={product.name}
                           className="w-full h-14 object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = IMAGE_PLACEHOLDER_DATAURI;
+                          }}
                         />
                         <div className="p-1.5">
                           <div className="text-[9px] font-medium text-foreground line-clamp-1">{product.name}</div>
