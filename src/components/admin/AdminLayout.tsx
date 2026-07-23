@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Newspaper,
   Image as ImageIcon,
+  FileEdit,
   UserCog,
   ShieldCheck,
   ScrollText,
@@ -37,6 +38,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -75,6 +77,7 @@ const navSections: NavSection[] = [
   {
     title: "内容管理",
     items: [
+      { label: "CMS内容管理", icon: FileEdit, href: "/admin/cms", permission: "content.publish" },
       { label: "资讯管理", icon: Newspaper, href: "/admin/news", permission: "content.news" },
       { label: "Banner管理", icon: ImageIcon, href: "/admin/banners", permission: "content.banner" },
     ],
@@ -231,23 +234,25 @@ function UserMenu() {
         <ChevronDown className="h-4 w-4 text-slate-400 hidden sm:block" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel>
-          <div className="flex flex-col gap-1 py-1">
-            <span className="font-semibold text-sm text-foreground">{user.name}</span>
-            <span className="text-xs text-muted-foreground">{user.email}</span>
-            <span className="flex items-center gap-2 pt-1">
-              <span
-                className={cn(
-                  "px-2 py-0.5 text-[10px] font-semibold rounded",
-                  roleColor
-                )}
-              >
-                {roleLabel}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            <div className="flex flex-col gap-1 py-1">
+              <span className="font-semibold text-sm text-foreground">{user.name}</span>
+              <span className="text-xs text-muted-foreground">{user.email}</span>
+              <span className="flex items-center gap-2 pt-1">
+                <span
+                  className={cn(
+                    "px-2 py-0.5 text-[10px] font-semibold rounded",
+                    roleColor
+                  )}
+                >
+                  {roleLabel}
+                </span>
+                <span className="text-[11px] text-muted-foreground">{user.department}</span>
               </span>
-              <span className="text-[11px] text-muted-foreground">{user.department}</span>
-            </span>
-          </div>
-        </DropdownMenuLabel>
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer"

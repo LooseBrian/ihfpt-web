@@ -4,7 +4,10 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { products as seedProducts, type Product } from "@/lib/data";
 import { userApi, type BackendProduct } from "@/lib/api-client";
 import { getDefaultProductImage, sanitizeProductImage } from "@/lib/product-images";
-import { generateProductSKU } from "@/lib/code-generator";
+// NOTE: generateProductSKU is intentionally NOT imported here.
+// Following the Amazon ASIN model, SKU codes are generated ONLY by the
+// backend (CodeGenerator::generateProductCode). The frontend must use
+// the sku_code returned by the API response, never generate its own.
 
 // ===== Types =====
 
@@ -83,17 +86,22 @@ const ProductContext = createContext<ProductContextType>({
   refreshFromBackend: async () => {},
 });
 
-const STORAGE_KEY = "ihf_products_v4";
+const STORAGE_KEY = "ihf_products_v6";
 
 // ===== Seed data: convert static products to ManagedProduct =====
 
+// Use a FIXED old timestamp for seed products so they don't appear as "newest"
+// in the product hall. Previously this used `new Date().toISOString()` which
+// gave seed products the current time on every page load, causing them to
+// always rank above backend-created products in "新品优先" sort.
+const SEED_TIMESTAMP = "2026-01-01T00:00:00.000Z";
+
 function createSeedProducts(): ManagedProduct[] {
-  const now = new Date().toISOString();
   return seedProducts.map((p) => ({
     ...p,
     status: "approved" as ProductStatus,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
     createdBy: p.supplier,
   }));
 }
@@ -381,6 +389,9 @@ export function ProductProvider({ children }: { children: ReactNode }) {
           // provides it, so URLs become `/product?id=PTJJUHG5T7`. Fall back to
           // the legacy `BP-{id}` form when `sku_code` is absent (backward compat).
           const skuCode = bp.sku_code || undefined;
+          // Use backend media if available, otherwise fall back to default image
+          const backendImages = (bp as BackendProduct).images;
+          const backendVideos = (bp as BackendProduct).videos;
           const newProduct: ManagedProduct = {
             id: skuCode || `BP-${bp.id}`,
             skuCode,
@@ -389,10 +400,11 @@ export function ProductProvider({ children }: { children: ReactNode }) {
             moq: `${bp.min_order_quantity || ""} ${bp.unit || ""}`.trim(),
             priceRange: `$${bp.price}`,
             supplier: bp.supplier_company || bp.supplier_name || "",
+            supplierCode: bp.supplier_code || undefined,
             certType: bp.halal_cert_type || "",
-            image: defaultImg,
-            images: [defaultImg],
-            videos: [],
+            image: backendImages && backendImages.length > 0 ? backendImages[0] : defaultImg,
+            images: backendImages && backendImages.length > 0 ? backendImages : [defaultImg],
+            videos: backendVideos || [],
             category: bp.category_name || "",
             origin: bp.origin || "",
             status: "approved" as ProductStatus,
@@ -417,6 +429,9 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
           const defaultImg = getDefaultProductImage({ name: bp.name, category: bp.category_name });
           const skuCode = bp.sku_code || undefined;
+          // Use backend media if available, otherwise fall back to default image
+          const backendImages = (bp as BackendProduct).images;
+          const backendVideos = (bp as BackendProduct).videos;
           const newProduct: ManagedProduct = {
             id: skuCode || `BP-${bp.id}`,
             skuCode,
@@ -426,9 +441,9 @@ export function ProductProvider({ children }: { children: ReactNode }) {
             priceRange: `$${bp.price}`,
             supplier: bp.supplier_company || bp.supplier_name || "",
             certType: bp.halal_cert_type || "",
-            image: defaultImg,
-            images: [defaultImg],
-            videos: [],
+            image: backendImages && backendImages.length > 0 ? backendImages[0] : defaultImg,
+            images: backendImages && backendImages.length > 0 ? backendImages : [defaultImg],
+            videos: backendVideos || [],
             category: bp.category_name || "",
             origin: bp.origin || "",
             status: (bp.status as ProductStatus) || "pending",
@@ -473,15 +488,17 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   const addProduct: ProductContextType["addProduct"] = useCallback((product) => {
     const now = new Date().toISOString();
-    // Generate a temporary SKU code for frontend-only products (created locally
-    // before backend sync). When the product is later synced, the backend
-    // `sku_code` takes precedence. Reuse any provided skuCode (e.g. re-edit).
-    const skuCode = product.skuCode || generateProductSKU();
-    const id = product.id || skuCode;
+    // Amazon ASIN model: the frontend NEVER generates SKU codes.
+    // The backend (CodeGenerator::generateProductCode) is the single source
+    // of truth for PT+8 codes. If the product has been synced to the backend,
+    // product.skuCode holds the backend-returned code. If not yet synced,
+    // skuCode is undefined and a temporary local ID is used until sync.
+    const skuCode = product.skuCode || undefined;
+    const id = product.id || skuCode || `local-${Date.now()}`;
     const newProduct: ManagedProduct = {
       ...product,
       id,
-      skuCode,
+      ...(skuCode ? { skuCode } : {}),
       status: "pending",
       createdAt: now,
       updatedAt: now,

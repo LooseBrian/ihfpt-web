@@ -143,6 +143,12 @@ export function setStoredAdmin(admin: AdminInfo): void {
   localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(admin));
 }
 
+/** Remove only the admin data entry (leaves tokens intact). */
+export function clearStoredAdmin(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ADMIN_DATA_KEY);
+}
+
 // ===== Core Request =====
 
 interface RequestOptions {
@@ -256,55 +262,67 @@ async function refreshAccessToken(): Promise<boolean> {
   // Deduplicate concurrent refresh requests
   if (refreshPromise) return refreshPromise;
 
-  refreshPromise = (async () => {
+  refreshPromise = doRefresh();
+
+  return refreshPromise;
+}
+
+async function doRefresh(): Promise<boolean> {
+  try {
     const refreshToken = getRefreshToken();
     if (!refreshToken) return false;
 
-    // Determine token type: admin sessions store admin data in localStorage,
-    // regular user sessions do not. Use the correct refresh endpoint accordingly.
-    const isAdminSession = (() => {
-      if (typeof window === "undefined") return false;
+    // Determine token type by decoding the JWT payload.
+    // The JWT contains a "guard" field ("user" or "admin") that reliably
+    // identifies the session type — unlike checking localStorage for
+    // ADMIN_DATA_KEY, which can be stale from a previous admin login
+    // in the same browser.
+    let isAdminSession = false;
+    const token = getAccessToken();
+    if (token) {
       try {
-        return localStorage.getItem(ADMIN_DATA_KEY) !== null;
+        const parts = token.split(".");
+        if (parts.length >= 2) {
+          const payload = JSON.parse(
+            atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+          );
+          isAdminSession = payload.guard === "admin";
+        }
       } catch {
-        return false;
+        // ignore decode errors
       }
-    })();
+    }
 
     const refreshUrl = isAdminSession
       ? `${API_BASE_URL}/api/admin/auth/refresh`
       : `${API_BASE_URL}/api/auth/refresh`;
 
-    try {
-      const response = await fetch(refreshUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
+    const response = await fetch(refreshUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
 
-      if (!response.ok) return false;
+    if (!response.ok) return false;
 
-      const result = (await response.json()) as ApiResponse<{
-        access_token: string;
-        refresh_token: string;
-        expires_in: number;
-      }>;
+    const result = (await response.json()) as ApiResponse<{
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+    }>;
 
-      if (!result.success || !result.data) return false;
+    if (!result.success || !result.data) return false;
 
-      setTokens(result.data.access_token, result.data.refresh_token);
-      return true;
-    } catch {
-      return false;
-    } finally {
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
+    setTokens(result.data.access_token, result.data.refresh_token);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    refreshPromise = null;
+  }
 }
 
 // ===== Public API Methods =====
@@ -556,10 +574,15 @@ export interface BackendProduct {
   // Joined fields (public list/detail)
   supplier_name?: string;
   supplier_company?: string;
+  /** Supplier user_code (e.g. "SRXXXXXXXX") — Amazon vendor-code style */
+  supplier_code?: string;
   supplier_logo?: string | null;
   supplier_location?: string;
   supplier_tier?: string;
   category_name?: string;
+  // Media fields (from product_media table)
+  images?: string[];
+  videos?: { url: string; thumbnail?: string; duration?: string; title?: string }[];
 }
 
 export interface BackendCategory {
@@ -622,6 +645,8 @@ export const userApi = {
     storage_conditions?: string;
     shelf_life?: string;
     origin?: string;
+    images?: string[];
+    videos?: { url: string; thumbnail?: string; duration?: string; title?: string }[];
   }) => api.post<BackendProduct>("/api/products", data),
 
   // ===== Supplier: Update Product =====

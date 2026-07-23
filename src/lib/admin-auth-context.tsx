@@ -13,6 +13,30 @@ import {
   type AdminInfo,
 } from "./api-client";
 
+// ===== Helpers =====
+
+/**
+ * Check if the JWT currently in localStorage belongs to an admin session.
+ * Used to guard against a race condition where a supplier/buyer logs in
+ * while AdminAuthProvider.restoreSession() is still running an async
+ * adminMe()/adminRefresh() call — in that case the token has already been
+ * replaced and we must NOT clear it.
+ */
+function isCurrentTokenAdmin(): boolean {
+  const token = getAccessToken();
+  if (!token) return false;
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return false;
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+    );
+    return payload.guard === "admin";
+  } catch {
+    return false;
+  }
+}
+
 // ===== Admin Role System =====
 
 export type AdminRole = "super_admin" | "operations_manager" | "content_editor" | "auditor" | "viewer";
@@ -93,7 +117,25 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       const token = getAccessToken();
       const storedAdmin = getStoredAdmin();
 
-      if (token && storedAdmin) {
+      // Only restore admin session if the JWT actually belongs to an admin.
+      // If the current token is a supplier/buyer token (guard="user"), skip
+      // admin restore entirely — otherwise adminRefresh() would fail and
+      // clearTokens() would destroy the supplier's session.
+      const isAdminToken = (() => {
+        if (!token) return false;
+        try {
+          const parts = token.split(".");
+          if (parts.length < 2) return false;
+          const payload = JSON.parse(
+            atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+          );
+          return payload.guard === "admin";
+        } catch {
+          return false;
+        }
+      })();
+
+      if (isAdminToken && storedAdmin) {
         // We have a token and cached admin data - restore immediately
         setUser(mapAdminInfo(storedAdmin));
 
@@ -103,7 +145,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
           const mappedAdmin = mapAdminInfo(freshAdmin);
           setUser(mappedAdmin);
           setStoredAdmin(freshAdmin);
-        } catch (err) {
+        } catch {
           // Token might be expired - try refresh
           const refreshToken = getRefreshToken();
           if (refreshToken) {
@@ -116,12 +158,20 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
               setUser(mappedAdmin);
               setStoredAdmin(freshAdmin);
             } catch {
-              // Refresh failed - clear everything
-              clearTokens();
+              // Refresh failed. CRITICAL: only clear tokens if the current
+              // token is STILL an admin token. If a supplier/buyer logged in
+              // while this async restore was in flight, the token has been
+              // replaced and clearing it would destroy their session.
+              if (isCurrentTokenAdmin()) {
+                clearTokens();
+              }
               setUser(null);
             }
           } else {
-            clearTokens();
+            // No refresh token — same guard applies.
+            if (isCurrentTokenAdmin()) {
+              clearTokens();
+            }
             setUser(null);
           }
         }

@@ -32,7 +32,7 @@ export const IMAGE_LIMITS = {
 
 export const VIDEO_LIMITS = {
   maxCount: 3,
-  maxSize: 100, // MB
+  maxSize: 15, // MB — must match VIDEO_MAX_BASE64_SIZE (base64 storage constraint)
   acceptedFormats: ["video/mp4", "video/quicktime", "video/webm"],
   acceptedExtensions: [".mp4", ".mov", ".webm"],
   maxDuration: 300, // seconds (5 min)
@@ -142,6 +142,35 @@ function getImageDimensions(file: File): Promise<{ width: number; height: number
     img.src = url;
   });
 }
+
+/**
+ * Convert a video File to a base64 data URI.
+ *
+ * Like images, videos must be stored as data URIs — not blob: URLs — because
+ * blob: URLs are invalidated on page reload and filtered out by handleSubmit().
+ * The data URI persists in localStorage and is sent to the backend.
+ *
+ * Note: Base64 encoding increases size by ~33%. The PHP post_max_size and
+ * Nginx client_max_body_size must be large enough to accommodate the total
+ * request body (all images + videos + product data).
+ */
+async function fileToVideoDataURI(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result) {
+        resolve(result);
+      } else {
+        reject(new Error("Failed to read video file"));
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read video file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+export const VIDEO_MAX_BASE64_SIZE = 15; // MB — max video file size for base64 storage
 
 function getVideoDuration(file: File): Promise<number> {
   return new Promise((resolve) => {
@@ -289,9 +318,29 @@ export function MediaUpload({
         continue;
       }
 
+      // Check if video is small enough for base64 storage.
+      // Base64 encoding increases size by ~33%, so we check against
+      // VIDEO_MAX_BASE64_SIZE to ensure it fits within PHP post_max_size.
+      const sizeMB = file.size / (1024 * 1024);
+      if (sizeMB > VIDEO_MAX_BASE64_SIZE) {
+        newErrors[fileId] = `视频过大 (${sizeMB.toFixed(1)}MB)，base64存储上限为 ${VIDEO_MAX_BASE64_SIZE}MB，请压缩后重试`;
+        continue;
+      }
+
+      // Convert to base64 data URI for persistence.
+      // blob: URLs from URL.createObjectURL() are invalidated on page reload
+      // and filtered out by handleSubmit(), so videos must be data URIs.
+      let videoUrl: string;
+      try {
+        videoUrl = await fileToVideoDataURI(file);
+      } catch {
+        newErrors[fileId] = "视频转换失败，请重试";
+        continue;
+      }
+
       validVideos.push({
         id: fileId,
-        url: URL.createObjectURL(file),
+        url: videoUrl,
         file,
         duration,
         size: file.size,

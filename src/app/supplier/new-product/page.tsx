@@ -358,6 +358,16 @@ function NewProductPageContent() {
           : undefined,
         shelf_life: shelfLife || undefined,
         origin: origin || undefined,
+        // ===== Media: send images (base64 data URIs) and videos to backend =====
+        images: images.map((img) => img.url).filter((url) => url && !url.startsWith("blob:")),
+        videos: videos
+          .filter((v) => v.url && !v.url.startsWith("blob:"))
+          .map((v) => ({
+            url: v.url,
+            thumbnail: v.thumbnail,
+            duration: v.duration?.toString(),
+            title: v.title,
+          })),
       };
 
       // Build local product data for localStorage
@@ -396,25 +406,31 @@ function NewProductPageContent() {
         services: selectedServices,
       };
 
-      // ===== Backend API sync (best-effort, won't block localStorage save) =====
+      // ===== Backend API sync =====
       // Check if editing a product that has a backend ID
       const existingProduct = isEditing && editId ? getProductById(editId) : null;
       const backendId = existingProduct?.backendId;
       let backendWarning = "";
       let newBackendId: number | undefined;
+      // Amazon ASIN model: capture the backend-generated sku_code from the
+      // API response. The frontend must NEVER generate PT+8 codes — only the
+      // backend CodeGenerator can create canonical SKU codes.
+      let newSkuCode: string | undefined;
 
       try {
         if (isEditing && backendId) {
-          // Editing a product that exists in the backend — use the numeric backend ID
+          // Editing a product that exists in the backend — update it
           await userApi.updateProduct(String(backendId), productData);
-        } else if (isEditing && !backendId) {
-          // Editing a localStorage-only product (seed data or pre-backend) — skip backend sync
-          backendWarning = "该产品为本地数据，未同步至后端";
-        } else if (!isEditing) {
-          // Creating a new product — sync to backend and capture the returned ID
+        } else {
+          // Both new products AND localStorage-only products (no backendId)
+          // must be synced to the backend. The backend generates the sku_code
+          // (like Amazon generates ASINs) and returns it in the response.
           const result = await userApi.createProduct(productData);
           if (result?.id) {
             newBackendId = Number(result.id);
+          }
+          if (result?.sku_code) {
+            newSkuCode = result.sku_code;
           }
         }
       } catch (backendErr) {
@@ -440,16 +456,23 @@ function NewProductPageContent() {
             : "draft";
 
       if (isEditing && editId) {
-        // Don't include backendId in update — preserve existing value
+        // Include newBackendId and newSkuCode if the product was just created
+        // on the backend (previously localStorage-only product that had no
+        // backendId). The sku_code is the backend-generated canonical
+        // identifier — like an Amazon ASIN, it must be stored locally so
+        // the supplier and admin both reference the same code.
         updateProduct(editId, {
           ...localProductData,
           status: newStatus,
+          ...(newBackendId !== undefined ? { backendId: newBackendId } : {}),
+          ...(newSkuCode ? { skuCode: newSkuCode } : {}),
         });
       } else {
-        // For new products, include the backendId from the API response
+        // For new products, include the backendId and sku_code from the API
         const newId = addProduct({
           ...localProductData,
           ...(newBackendId !== undefined ? { backendId: newBackendId } : {}),
+          ...(newSkuCode ? { skuCode: newSkuCode } : {}),
         });
         if (action === "draft") {
           updateProduct(newId, { status: "draft" });
@@ -459,9 +482,14 @@ function NewProductPageContent() {
       // ===== Show result message =====
       if (action === "submit") {
         if (backendWarning) {
-          alert(`产品已提交审核（本地保存成功）。\n\n后端同步提示：${backendWarning}\n\n如需同步至后端，请稍后重试。`);
+          alert(`⚠️ 产品提交存在问题\n\n本地保存成功，但后端同步失败：\n${backendWarning}\n\n管理员可能无法看到此产品。请重新登录后再次编辑提交。`);
         } else {
-          alert("产品已提交审核！平台将在 3-5 个工作日内完成审核，审核通过后将在产品大厅展示。");
+          // Display the backend-generated SKU code (like an Amazon ASIN) so
+          // the user knows the exact code to reference in admin search.
+          const skuInfo = newSkuCode
+            ? `\n\n产品SKU编码：${newSkuCode}\n（此编码由系统自动生成，可在管理员后台搜索到此产品）`
+            : "";
+          alert(`产品已提交审核！平台将在 3-5 个工作日内完成审核，审核通过后将在产品大厅展示。${skuInfo}`);
         }
       } else {
         // Different message for approved products (stays live) vs draft products

@@ -24,7 +24,7 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative bg-brand-900 text-white overflow-hidden">
+    <section className="relative bg-brand-900 text-white overflow-hidden min-h-[calc(100vh-160px)] flex items-center">
       {/* Background video */}
       <video
         autoPlay
@@ -39,32 +39,32 @@ export function HeroSection() {
       {/* Overlay for text readability */}
       <div className="absolute inset-0 bg-brand-900/60" />
 
-      <div className="container mx-auto px-4 py-24 md:py-36 lg:py-44 relative z-10">
+      <div className="container mx-auto px-4 py-6 md:py-8 relative z-10 w-full">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-brand-800/80 backdrop-blur-sm border border-brand-700 rounded-full px-4 py-1.5 mb-8">
+          <div className="inline-flex items-center gap-2 bg-brand-800/80 backdrop-blur-sm border border-brand-700 rounded-full px-4 py-1.5 mb-4">
             <span className="w-2 h-2 bg-gold-400 rounded-full animate-pulse" />
             <span className="text-sm text-brand-100">
               中国食品药品企业质量安全促进会主办
             </span>
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold mb-3 leading-tight">
             国际清真食品产业平台
           </h1>
-          <p className="text-lg md:text-2xl text-brand-200 mb-3">
+          <p className="text-lg md:text-2xl text-brand-200 mb-2">
             International Halal Food Industrial Platform
           </p>
-          <p className="text-xl md:text-3xl font-semibold text-gold-400 mb-4">
+          <p className="text-xl md:text-3xl font-semibold text-gold-400 mb-2">
             中国特色产业链出海平台
           </p>
-          <p className="text-base md:text-lg text-brand-300 mb-8 max-w-xl mx-auto">
+          <p className="text-base md:text-lg text-brand-300 mb-5 max-w-xl mx-auto">
             国家级、全球化、垂直型清真食品 B2B 贸易与产业服务平台
             <br className="hidden md:block" />
             链接中国优质清真食品产能与全球穆斯林消费市场
           </p>
 
           {/* Search bar */}
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-4">
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-3">
             <div className="flex gap-2 bg-white rounded-xl p-1.5 shadow-2xl">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -86,7 +86,7 @@ export function HeroSection() {
           </form>
 
           {/* Hot search tags */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
             <span className="text-xs text-brand-300">热门搜索:</span>
             {hotSearchTags.slice(0, 8).map((tag) => (
               <button
@@ -122,7 +122,7 @@ export function HeroSection() {
             </a>
           </div>
 
-          <div className="mt-16 flex flex-wrap items-center justify-center gap-6 text-sm text-brand-300">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-sm text-brand-300">
             {["覆盖 28+ 国家", "首批 50+ 供应商", "6 大核心品类", "一站式服务"].map(
               (item) => (
                 <div key={item} className="flex items-center gap-1.5">

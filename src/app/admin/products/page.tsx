@@ -55,6 +55,7 @@ interface Product {
   category_id: string | null;
   name: string;
   sku: string;
+  sku_code: string | null;
   price: string;
   unit: string;
   status: ProductStatus;
@@ -68,6 +69,9 @@ interface Product {
   updated_at: string;
   supplier_name?: string;
   category_name?: string;
+  // Media fields (from product_media table via attachMedia)
+  images?: string[];
+  videos?: { url: string }[];
 }
 
 /** Full product detail returned by GET /api/admin/products/{id} */
@@ -101,6 +105,8 @@ interface PreviewProduct {
   supplier_code?: string;
   supplier_location?: string;
   category_name?: string;
+  images?: string[];
+  videos?: { url: string; thumbnail?: string; duration?: string; title?: string }[];
 }
 
 interface PaginatedResponse<T> {
@@ -381,7 +387,7 @@ function ProductReviewContent() {
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="搜索产品名称 / 编号 / 供应商"
+              placeholder="搜索产品名称 / SKU编码 / 供应商"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -483,14 +489,19 @@ function ProductReviewContent() {
                       >
                         {/* Image */}
                         <td className="px-4 py-3">
-                          <div className="w-20 h-[60px] rounded-lg bg-slate-100 flex items-center justify-center">
-                            <ImageIcon className="h-6 w-6 text-slate-300" />
+                          <div className="w-20 h-[60px] rounded-lg overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center">
+                            {product.images && product.images.length > 0 ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <ImageIcon className="h-6 w-6 text-slate-300" />
+                            )}
                           </div>
                         </td>
                         {/* ID / SKU */}
                         <td className="px-4 py-3">
                           <span className="font-mono text-xs text-slate-500">
-                            {product.sku || product.id}
+                            {product.sku_code || product.sku || product.id}
                           </span>
                         </td>
                         {/* Name */}
@@ -796,12 +807,66 @@ function ProductReviewContent() {
                     </div>
                   )}
 
-                  {/* Image placeholder */}
-                  <div className="w-full h-48 rounded-xl bg-slate-100 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2 text-slate-400">
-                      <ImageIcon className="h-10 w-10" />
-                      <span className="text-xs">产品图片（暂未上传）</span>
+                  {/* Product Images & Videos */}
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <ImageIcon className="h-4 w-4 text-slate-600" />
+                      <span className="text-sm font-semibold text-slate-800">产品图片与视频</span>
+                      {previewDetail.images && previewDetail.images.length > 0 && (
+                        <span className="text-xs text-slate-400">({previewDetail.images.length} 张图片{(previewDetail.videos?.length ?? 0) > 0 ? `、${previewDetail.videos.length} 个视频` : ""})</span>
+                      )}
                     </div>
+                    {previewDetail.images && previewDetail.images.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-3 gap-2 mb-2">
+                          {previewDetail.images.slice(0, 6).map((img, idx) => (
+                            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={img}
+                                alt={`产品图片 ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  target.style.display = "none";
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-300"><svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>';
+                                  }
+                                }}
+                              />
+                              {idx === 0 && (
+                                <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-brand-600 text-white text-[10px] rounded font-medium">主图</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {previewDetail.images.length > 6 && (
+                          <p className="text-xs text-slate-400 mb-2">还有 {previewDetail.images.length - 6} 张图片未显示</p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="w-full h-32 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
+                        <div className="flex flex-col items-center gap-2 text-slate-400">
+                          <ImageIcon className="h-8 w-8" />
+                          <span className="text-xs">暂无图片</span>
+                        </div>
+                      </div>
+                    )}
+                    {/* Videos */}
+                    {previewDetail.videos && previewDetail.videos.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {previewDetail.videos.map((video, idx) => (
+                          <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 bg-slate-900">
+                            <video
+                              src={video.url}
+                              controls
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Basic Info Grid */}

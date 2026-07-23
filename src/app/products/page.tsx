@@ -19,6 +19,7 @@ import {
   type ViewMode,
 } from "@/components/products/ProductSortBar";
 import { ProductGrid } from "@/components/products/ProductGrid";
+import { ActiveFilterChips } from "@/components/products/ActiveFilterChips";
 import { ProductServicesSection } from "@/components/products/ProductServicesSection";
 import { ProductStatsSection } from "@/components/products/ProductStatsSection";
 import { CTASection } from "@/components/sections/CTASection";
@@ -124,7 +125,15 @@ export default function ProductsPage() {
     // Sorting
     switch (sort) {
       case "newest":
-        result.sort((a, b) => b.id.localeCompare(a.id));
+        // Sort by creation/update timestamp (newest first).
+        // Previously used b.id.localeCompare(a.id) which sorted by string ID,
+        // causing seed products (id="p1".."p24") to always appear before
+        // backend products (id="PT3KQ7YBF9") due to lowercase > uppercase.
+        result.sort((a, b) => {
+          const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
         break;
       case "inquiry":
         result.sort((a, b) => {
@@ -196,6 +205,13 @@ export default function ProductsPage() {
                   onViewModeChange={setViewMode}
                   resultCount={filteredProducts.length}
                   currentRange={currentRange}
+                />
+
+                <ActiveFilterChips
+                  filters={filters}
+                  onChange={setFilters}
+                  resultCount={filteredProducts.length}
+                  totalCount={approvedProducts.length}
                 />
 
                 {loading ? (

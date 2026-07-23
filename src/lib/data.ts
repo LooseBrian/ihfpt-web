@@ -43,6 +43,12 @@ export interface Product {
   moq: string;
   priceRange: string;
   supplier: string;
+  /**
+   * Supplier user_code (e.g. "SRXXXXXXXX") — Amazon-style vendor code.
+   * Used for /store/SRXXXXXXXX URL routing (analogous to amazon.com/sp?seller=XXXX).
+   * Sourced from backend `users.user_code AS supplier_code`.
+   */
+  supplierCode?: string;
   certType: string;
   image: string;
   images?: string[];

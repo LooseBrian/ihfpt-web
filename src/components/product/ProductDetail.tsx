@@ -232,7 +232,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 <MessageSquare className="h-5 w-5" />
                 立即询价
               </Button>
-              <Link href="/store/huifa" className="flex-1">
+              <Link href={product.supplierCode ? `/store/${product.supplierCode}` : "/store/huifa"} className="flex-1">
                 <Button size="lg" variant="outline" className="w-full gap-2">
                   <Store className="h-5 w-5" />
                   进入店铺
@@ -283,7 +283,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <div className="mt-10">
             <h2 className="text-xl font-bold text-foreground mb-5 flex items-center gap-2">
               同店产品推荐
-              <Link href="/store/huifa" className="text-sm font-normal text-brand-600 hover:underline">
+              <Link href={product.supplierCode ? `/store/${product.supplierCode}` : "/store/huifa"} className="text-sm font-normal text-brand-600 hover:underline">
                 查看全部 →
               </Link>
             </h2>

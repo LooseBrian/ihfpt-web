@@ -107,6 +107,7 @@ export function SupplierProducts() {
   const { user } = useAuth();
   const {
     loading,
+    products,
     takeDownProduct,
     deleteProduct,
     relistProduct,
@@ -167,7 +168,7 @@ export function SupplierProducts() {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          (p.skuCode || p.id).toLowerCase().includes(q) ||
+          (p.skuCode || "").toLowerCase().includes(q) ||
           (p.category || "").toLowerCase().includes(q)
       );
     }
@@ -483,7 +484,7 @@ export function SupplierProducts() {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-muted-foreground">{product.skuCode || product.id}</span>
+                          <span className="text-xs font-mono text-muted-foreground">{product.skuCode || "待同步"}</span>
                           <span className="text-sm text-foreground truncate">{product.name}</span>
                         </div>
                         <span className="text-xs text-red-500">已删除 · {formatDate(product.updatedAt)}</span>
@@ -633,7 +634,7 @@ export function SupplierProducts() {
                       </div>
                       {/* SKU */}
                       <div className="md:col-span-2">
-                        <span className="text-xs font-mono text-brand-600 font-medium">{product.skuCode || product.id}</span>
+                        <span className="text-xs font-mono text-brand-600 font-medium">{product.skuCode || <span className="text-muted-foreground italic">待同步</span>}</span>
                       </div>
                       {/* Name */}
                       <div className="md:col-span-2">
@@ -884,7 +885,10 @@ export function SupplierProducts() {
               <div>
                 <h2 className="text-lg font-bold text-foreground">媒体资源管理</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  SKU编码：{editingProduct} · 图片最多 {IMAGE_LIMITS.maxCount} 张 · 视频最多 {VIDEO_LIMITS.maxCount} 个
+                  SKU编码：{(() => {
+                    const p = products.find(p => p.id === editingProduct);
+                    return p?.skuCode || "待同步";
+                  })()} · 图片最多 {IMAGE_LIMITS.maxCount} 张 · 视频最多 {VIDEO_LIMITS.maxCount} 个
                 </p>
               </div>
               <button

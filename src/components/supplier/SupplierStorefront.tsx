@@ -28,7 +28,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { InquiryDialog } from "@/components/inquiry/InquiryDialog";
 
-interface StorefrontData {
+export interface StorefrontData {
+  supplierCode?: string;
   companyName: string;
   shortName: string;
   slogan: string;
@@ -84,6 +85,7 @@ interface StorefrontQualification {
 }
 
 const defaultData: StorefrontData = {
+  supplierCode: "SRXTUZ0W1C",
   companyName: "惠发食品有限公司",
   shortName: "惠发食品",
   slogan: "专注清真食品 · 品质连接世界",
@@ -145,7 +147,7 @@ export function SupplierStorefront({
   };
 
   const navItems = [
-    { id: "products", label: "全部产品", count: data.products.length },
+    { id: "products", label: "全部产品", count: data.stats?.products ?? data.products.length },
     { id: "about", label: "企业介绍" },
     { id: "cases", label: "出口案例", count: data.cases.length },
     { id: "qualifications", label: "资质证书", count: data.qualifications.length },
@@ -197,6 +199,11 @@ export function SupplierStorefront({
                   <span className="flex items-center gap-1 px-2 py-0.5 bg-white/15 text-brand-50 text-xs font-medium rounded">
                     <ShieldCheck className="h-3 w-3" />
                     已认证
+                  </span>
+                )}
+                {data.supplierCode && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 bg-white/10 text-brand-50 text-xs font-mono rounded border border-white/20">
+                    编码：{data.supplierCode}
                   </span>
                 )}
               </div>
@@ -421,7 +428,7 @@ export function SupplierStorefront({
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                   <Store className="h-5 w-5 text-brand-600" />
                   全部产品
-                  <span className="text-sm text-muted-foreground font-normal">({data.products.length})</span>
+                  <span className="text-sm text-muted-foreground font-normal">({data.stats?.products ?? data.products.length})</span>
                 </h2>
                 {!previewMode && (
                   <button className="text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">

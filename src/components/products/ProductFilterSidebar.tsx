@@ -171,13 +171,13 @@ export function ProductFilterSidebar({
           </div>
           {totalActive > 0 && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={clearAll}
-              className="h-7 text-xs text-muted-foreground hover:text-brand-700 gap-1 px-2"
+              className="h-7 text-xs gap-1 px-2 border-brand-200 text-brand-700 hover:bg-brand-50"
             >
               <RotateCcw className="h-3 w-3" />
-              重置
+              清除全部
             </Button>
           )}
         </div>

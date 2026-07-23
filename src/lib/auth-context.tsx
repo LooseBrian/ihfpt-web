@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { authApi, type UserInfo, setTokens, clearTokens, getAccessToken } from "@/lib/api-client";
+import { authApi, type UserInfo, setTokens, clearTokens, clearStoredAdmin, getAccessToken } from "@/lib/api-client";
 import { generateSupplierCode, generateBuyerCode } from "@/lib/code-generator";
 
 export type UserType = "supplier" | "buyer" | null;
@@ -97,6 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const resp = await authApi.userLogin(email, password);
       setTokens(resp.access_token, resp.refresh_token);
+      // Clear any stale admin session data so AdminAuthProvider won't
+      // try to restore an admin session with the supplier's token.
+      clearStoredAdmin();
 
       const u: UserInfo = resp.user;
       const userType: "supplier" | "buyer" = u.type === "supplier" ? "supplier" : "buyer";

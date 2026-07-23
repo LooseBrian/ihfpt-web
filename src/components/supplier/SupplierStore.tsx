@@ -619,16 +619,22 @@ export function SupplierStore() {
                       <h3 className="font-bold text-brand-900">店铺运营设置</h3>
                     </div>
                     <div className="space-y-4">
-                      {/* Store URL */}
+                      {/* Store URL — Amazon vendor-code style: /store/SRXXXXXXXX */}
                       <div>
                         <label className="text-sm font-medium text-foreground mb-1.5 block">店铺专属链接</label>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground whitespace-nowrap">ihf.org/store/</span>
                           <Input
-                            defaultValue={shortName.toLowerCase().replace(/\s+/g, "-")}
+                            defaultValue={user?.userCode || shortName.toLowerCase().replace(/\s+/g, "-")}
                             placeholder="店铺 URL"
                             className="h-10 flex-1 font-mono text-sm"
+                            readOnly={!!user?.userCode}
                           />
+                          {user?.userCode && (
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              (供应商编码即店铺地址)
+                            </span>
+                          )}
                         </div>
                       </div>
 

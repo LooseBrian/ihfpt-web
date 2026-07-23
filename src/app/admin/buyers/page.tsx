@@ -13,6 +13,8 @@ import {
   Mail,
   Phone,
   X,
+  Copy,
+  Check,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGuard } from "@/components/admin/AdminGuard";
@@ -38,6 +40,7 @@ import {
 // Backend Buyer record (User table, type='buyer')
 interface Buyer {
   id: string;
+  user_code: string | null;
   name: string;
   email: string;
   phone: string | null;
@@ -148,6 +151,25 @@ function BuyerManagementContent() {
   const [banReason, setBanReason] = useState("");
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Copy buyer code to clipboard
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = code;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    }
+  };
 
   // Fetch buyers with pagination + debounced search
   const {
@@ -315,7 +337,7 @@ function BuyerManagementContent() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="搜索企业名称 / 联系人 / 邮箱"
+              placeholder="搜索企业名称 / 联系人 / 邮箱 / 编码"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -368,6 +390,7 @@ function BuyerManagementContent() {
                 <thead>
                   <tr className="bg-muted/50 border-b border-slate-200">
                     <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">企业名称</th>
+                    <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">采购商编码</th>
                     <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">联系邮箱</th>
                     <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">联系电话</th>
                     <th className="text-left font-medium text-slate-600 px-4 py-3 whitespace-nowrap">邮箱认证</th>
@@ -392,6 +415,29 @@ function BuyerManagementContent() {
                             <div className="text-xs text-slate-400">
                               联系人：{buyer.name}
                             </div>
+                          )}
+                        </td>
+                        {/* Buyer Code (Amazon vendor-code style) */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {buyer.user_code ? (
+                            <div className="flex items-center gap-1.5">
+                              <code className="text-xs font-mono px-2 py-0.5 rounded bg-trust-50 text-trust-700 border border-trust-100">
+                                {buyer.user_code}
+                              </code>
+                              <button
+                                onClick={() => handleCopyCode(buyer.user_code!)}
+                                className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                                title="复制编码"
+                              >
+                                {copiedCode === buyer.user_code ? (
+                                  <Check className="h-3.5 w-3.5 text-green-500" />
+                                ) : (
+                                  <Copy className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </td>
                         {/* Email */}
@@ -543,6 +589,12 @@ function BuyerManagementContent() {
                 {banTarget.company_name || banTarget.name}
               </span>
             </p>
+            {banTarget.user_code && (
+              <p className="text-sm text-slate-500 mb-1">
+                采购商编码：
+                <code className="font-mono text-trust-700 ml-1">{banTarget.user_code}</code>
+              </p>
+            )}
             <p className="text-sm text-slate-500 mb-3">
               联系人：
               <span className="text-slate-700">{banTarget.name}</span>
